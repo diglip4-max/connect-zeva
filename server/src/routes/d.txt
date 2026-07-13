@@ -1,0 +1,231 @@
+Chalo ab Zeva Clinic side ka code banate hain — jo abhi tak nahi banaya tha. Yeh Next.js app (Zeva Clinic) me jayega, jahan staff "Team Chat" click karega.
+1. Redis client setup — Zeva Clinic side (agar already nahi hai)
+typescript// zeva-clinic/lib/redis.ts
+import Redis from "ioredis";
+
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+
+export default redis;
+
+2. Ticket generation — "Team Chat" click hone par API route
+typescript// zeva-clinic/app/api/messenger/create-ticket/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+import redis from "@/lib/redis";
+import { getServerSession } from "@/lib/auth"; // tera existing Zeva auth check
+
+const TICKET_EXPIRY_SECONDS = 60; // 1 minute - one-time use, short-lived
+
+export async function POST(req: NextRequest) {
+  try {
+    // Step 1: confirm user is logged into Zeva Clinic (existing session check)
+    const session = await getServerSession(req);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { user } = session;
+
+    // Step 2: generate a random, unguessable one-time ticket
+    const ticket = crypto.randomBytes(32).toString("hex");
+
+    // Step 3: store ticket -> user payload in Redis, with short TTL
+    const payload = {
+      zevaUserId: user.id,
+      clinicId: user.clinicId,
+      name: user.name,
+      avatarUrl: user.avatarUrl || null,
+      role: user.role, // "doctor" | "receptionist" | "staff" | "admin"
+    };
+
+    await redis.set(
+      `sso_ticket:${ticket}`,
+      JSON.stringify(payload),
+      "EX",
+      TICKET_EXPIRY_SECONDS
+    );
+
+    // Step 4: return the messenger URL with the ticket
+    const messengerUrl = `${process.env.MESSENGER_URL}/auth/sso?ticket=${ticket}`;
+
+    return NextResponse.json({ redirectUrl: messengerUrl });
+  } catch (err) {
+    console.error("Failed to create SSO ticket", err);
+    return NextResponse.json({ error: "Failed to create ticket" }, { status: 500 });
+  }
+}
+.env (Zeva Clinic side):
+MESSENGER_URL=http://localhost:5173
+REDIS_URL=redis://localhost:6379
+
+3. "Team Chat" button — Zeva Clinic frontend (React/Next.js component)
+typescript// zeva-clinic/components/TeamChatButton.tsx
+"use client";
+
+import { useState } from "react";
+import { MessageSquare, Loader2 } from "lucide-react";
+
+const TeamChatButton = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleClick = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/messenger/create-ticket", {
+        method: "POST",
+        credentials: "include", // Zeva ka session cookie bhejne ke liye
+      });
+
+      if (!res.ok) throw new Error("Failed to create ticket");
+
+      const { redirectUrl } = await res.json();
+
+      // naye tab me kholna ya same tab me redirect - business decision hai
+      window.open(redirectUrl, "_blank"); // naya tab
+      // ya: window.location.href = redirectUrl;  // same tab
+    } catch (err) {
+      console.error(err);
+      alert("Could not open Team Chat. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <MessageSquare className="h-4 w-4" />
+      )}
+      Team Chat
+    </button>
+  );
+};
+
+export default TeamChatButton;
+
+4. Internal verify-ticket endpoint — Zeva Clinic side (jo Messenger backend call karega)
+Yeh wahi endpoint hai jo tera Messenger ka auth.service.ts (verifyTicketWithZeva) call karta hai:
+typescript// zeva-clinic/app/api/internal/verify-ticket/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import redis from "@/lib/redis";
+
+export async function POST(req: NextRequest) {
+  try {
+    // Step 1: verify request is genuinely from Messenger (shared secret)
+    const apiKey = req.headers.get("x-internal-api-key");
+    if (apiKey !== process.env.MESSENGER_INTERNAL_API_KEY) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { ticket } = await req.json();
+    if (!ticket) {
+      return NextResponse.json({ error: "Ticket is required" }, { status: 400 });
+    }
+
+    // Step 2: look up ticket in Redis
+    const key = `sso_ticket:${ticket}`;
+    const data = await redis.get(key);
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "Invalid or expired ticket" },
+        { status: 401 }
+      );
+    }
+
+    // Step 3: CRITICAL - delete ticket immediately (one-time use only)
+    await redis.del(key);
+
+    const payload = JSON.parse(data);
+
+    return NextResponse.json(payload);
+  } catch (err) {
+    console.error("Ticket verification failed", err);
+    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
+  }
+}
+.env (Zeva Clinic side, iske liye):
+MESSENGER_INTERNAL_API_KEY=shared-secret-between-zeva-and-messenger
+Yeh exact wahi value honi chahiye jo Messenger ke .env me ZEVA_INTERNAL_API_KEY hai — dono taraf same secret.
+
+5. Staff deactivation webhook — Zeva Clinic side (jab admin staff remove/deactivate kare)
+Yeh wahi call hai jo humne discuss kiya tha Phase 3 me — Zeva ke existing staff-deactivation logic me yeh add karna hoga:
+typescript// zeva-clinic/lib/notifyMessengerDeactivation.ts
+export async function notifyMessengerOfDeactivation(zevaUserId: string) {
+  try {
+    await fetch(`${process.env.MESSENGER_URL}/internal-api/user-deactivated`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-api-key": process.env.MESSENGER_INTERNAL_API_KEY!,
+      },
+      body: JSON.stringify({ zevaUserId }),
+    });
+  } catch (err) {
+    // log kar, but staff-deactivation ka main flow fail nahi hona chahiye isके wajah se
+    console.error("Failed to notify Messenger of deactivation", err);
+  }
+}
+Jahan bhi tera existing staff-deactivate logic hai (jaise admin panel me "Remove Staff" button ka handler), wahan yeh function call kar do:
+typescript// jahan bhi staff deactivate hota hai, jaise:
+// app/api/staff/[id]/deactivate/route.ts
+
+import { notifyMessengerOfDeactivation } from "@/lib/notifyMessengerDeactivation";
+
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  // ... existing deactivation logic (DB update, etc.)
+
+  // naya call add karo:
+  await notifyMessengerOfDeactivation(params.id);
+
+  return NextResponse.json({ success: true });
+}
+
+Poora flow — ab end-to-end complete hai
+1. Staff Zeva Clinic me "Team Chat" button click karta hai
+2. Frontend -> POST /api/messenger/create-ticket (Zeva backend)
+3. Zeva verify karta hai session valid hai, ticket generate karta hai, Redis me store
+4. Frontend ko redirectUrl milta hai -> naye tab me khulta hai messenger.zeva.com/auth/sso?ticket=xyz
+5. Messenger frontend (SSOCallback.tsx) -> POST /api/auth/sso/verify (Messenger backend)
+6. Messenger backend -> POST /api/internal/verify-ticket (Zeva backend, server-to-server)
+7. Zeva ticket verify karta hai Redis se, turant delete karta hai, user data return karta hai
+8. Messenger user create/update karta hai, access+refresh token issue karta hai
+9. User logged in, chat ready
+Ek cheez confirm kar le — getServerSession wala function tera actual Zeva Clinic auth setup ke hisaab se replace karna padega (yeh maine generic naam se placeholder rakha hai, tera existing session/auth check jo bhi function hai, wahi use karna).
+Sab set hai — poora SSO handshake dono taraf se complete ho gaya. Agla kuch chahiye — attachment upload (S3/MinIO service), ya ChatWindow.tsx/MessageInput.tsx (actual chat UI)?are but ticket to ham zeva messenger me banayenge ya zeva clinic me ?Clarified ticket generation location and resolved architectural confusionClarified ticket generation location and resolved architectural confusionTicket hamesha Zeva Clinic me banega, Messenger me nahi — yeh important architectural point hai, clear kar deta hoon kyun.
+Kyun Zeva Clinic hi ticket banayega
+Ticket ka purpose hai: "main confirm kar raha hoon ki yeh user abhi Zeva Clinic me genuinely logged in hai." Yeh confirmation sirf wahi system de sakta hai jiske paas actual session/login information hai — matlab Zeva Clinic khud, kyunki wahi user ka original login state maintain karta hai (session cookie, JWT, jo bhi Zeva apna existing auth use karta hai).
+Messenger ke paas yeh jaankari hai hi nahi ki user Zeva me login hai ya nahi — Messenger toh ek bilkul separate service hai jise abhi tak pata hi nahi ki yeh user kaun hai. Isliye Messenger khud se ticket generate nahi kar sakta — usko verify karna padta hai ki ticket Zeva ne banaya tha aur woh valid hai.
+Analogy se samajh
+Socho tu kisi building me ja raha hai jahan reception (Zeva Clinic) tujhe pehle verify karta hai (tera ID card check karke), phir ek visitor pass (ticket) deta hai. Doosri floor ka security guard (Messenger) tera face nahi pehchanta, wo sirf yeh check karta hai ki tere paas reception ka diya hua valid pass hai ya nahi. Guard khud visitor pass nahi bana sakta — kyunki usko pata hi nahi tu kaun hai, wo sirf pass ko verify kar sakta hai jo reception se aaya.
+Poora flow — kaun kya karta hai (recap, clearly)
+ZEVA CLINIC (ticket ISSUE karta hai)
+├── User "Team Chat" click karta hai
+├── Zeva confirm karta hai: "haan yeh user mera hi logged-in staff hai"
+├── Zeva ek random ticket banata hai (crypto.randomBytes)
+├── Redis me store: ticket -> { zevaUserId, clinicId, name, role }
+└── Browser ko redirect URL deta hai: messenger.zeva.com/auth/sso?ticket=xyz
+
+                    ↓ (browser redirect ke through ticket Messenger tak pahunchta hai)
+
+ZEVA MESSENGER (ticket VERIFY karta hai)
+├── Frontend ticket ko URL se leta hai
+├── Backend ko bhejta hai: "yeh ticket check karo"
+├── Messenger backend Zeva Clinic ko server-to-server call karta hai
+│   ("ye ticket tumne banaya tha? valid hai?")
+├── Zeva confirm karta hai + user data deta hai + ticket delete karta hai
+└── Messenger ab apna session bana deta hai (access + refresh token)
+Code-level mapping (jo maine pehle diya)
+
+create-ticket endpoint → yeh Zeva Clinic ke codebase me hai (maine zeva-clinic/app/api/messenger/create-ticket/route.ts diya tha)
+verify-ticket endpoint → yeh bhi Zeva Clinic ke codebase me hai (zeva-clinic/app/api/internal/verify-ticket/route.ts) — Messenger isko call karta hai, khud nahi banata
+auth.service.ts ka verifyTicketWithZeva → yeh Messenger ke codebase me hai, jo Zeva ke verify-ticket endpoint ko hit karta hai
+
+Toh simple rule yaad rakh: jo system user ki identity confirm kar sakta hai (Zeva), wahi ticket issue karta hai. Jo system identity confirm nahi kar sakta (Messenger), wo sirf verify karta hai.
+Clear ho gaya, ya koi specific part abhi bhi confusing lag raha hai?
