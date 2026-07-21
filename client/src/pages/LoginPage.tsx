@@ -184,6 +184,16 @@ const LoginPage = () => {
                             field.onBlur();
                             trigger("email");
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              (
+                                document.getElementById(
+                                  "login-form",
+                                ) as HTMLFormElement
+                              )?.requestSubmit();
+                            }
+                          }}
                         />
                       </div>
                       {fieldState.error && (
@@ -228,6 +238,16 @@ const LoginPage = () => {
                             field.onBlur();
                             trigger("password");
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              (
+                                document.getElementById(
+                                  "login-form",
+                                ) as HTMLFormElement
+                              )?.requestSubmit();
+                            }
+                          }}
                         />
                         <button
                           type="button"
@@ -270,7 +290,6 @@ const LoginPage = () => {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  form="login-form"
                   className="w-full shadow-sm"
                   disabled={isLoading || isSubmitting || !isValid}
                 >

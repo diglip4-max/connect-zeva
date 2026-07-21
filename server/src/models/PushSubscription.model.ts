@@ -1,4 +1,3 @@
-// src/models/PushSubscription.model.ts
 import { Schema, model, Document, Types } from "mongoose";
 
 export interface IPushSubscription extends Document {
@@ -8,8 +7,12 @@ export interface IPushSubscription extends Document {
     p256dh: string;
     auth: string;
   };
-  deviceInfo?: string; // optional: browser/OS info for debugging
+  deviceLabel: string;
+  browserName?: string;
+  osName?: string;
+  lastUsedAt: Date;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const pushSubscriptionSchema = new Schema<IPushSubscription>(
@@ -25,10 +28,15 @@ const pushSubscriptionSchema = new Schema<IPushSubscription>(
       p256dh: { type: String, required: true },
       auth: { type: String, required: true },
     },
-    deviceInfo: { type: String },
+    deviceLabel: { type: String, default: "Unknown device" },
+    browserName: { type: String },
+    osName: { type: String },
+    lastUsedAt: { type: Date, default: Date.now },
   },
   { timestamps: true },
 );
+
+pushSubscriptionSchema.index({ userId: 1, createdAt: -1 });
 
 export const PushSubscription = model<IPushSubscription>(
   "PushSubscription",

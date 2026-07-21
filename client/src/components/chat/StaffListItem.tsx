@@ -16,12 +16,17 @@ const StaffListItem = ({ staff, isActive, onSelect }: StaffListItemProps) => (
       isActive ? "bg-primary/5" : ""
     }`}
   >
-    <Avatar className="h-11 w-11 shrink-0">
-      <AvatarImage src={staff.avatarUrl} alt={staff.name} />
-      <AvatarFallback className="bg-muted text-sm font-medium text-muted-foreground">
-        {getInitials(staff.name)}
-      </AvatarFallback>
-    </Avatar>
+    <div className="relative">
+      <Avatar className="h-11 w-11 shrink-0">
+        <AvatarImage src={staff.avatarUrl} alt={staff.name} />
+        <AvatarFallback className="bg-muted text-sm font-medium text-muted-foreground">
+          {getInitials(staff.name)}
+        </AvatarFallback>
+      </Avatar>
+      {staff.isOnline && (
+        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
+      )}
+    </div>
     <div className="min-w-0 flex-1">
       <span className="truncate text-sm font-medium">{staff.name}</span>
       <p className="truncate text-xs capitalize text-muted-foreground">

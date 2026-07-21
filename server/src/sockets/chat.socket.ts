@@ -2,15 +2,18 @@
 import { Server, Socket } from "socket.io";
 import { Conversation } from "../models/Conversation.model";
 import { Message } from "../models/Message.model";
+import { findOrCreateDirectConversation } from "../services/conversation.service";
 import logger from "../utils/logger";
+import { AppError } from "../utils/AppError";
 import {
   ServerToClientEvents,
   ClientToServerEvents,
   SocketData,
   SendMessagePayload,
   ReadReceiptPayload,
+  TypingPayload,
 } from "../types/socket.types";
-import { AppError } from "../utils/AppError";
+import { sendMessage } from "@/services/message.service";
 
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type TypedSocket = Socket<
@@ -23,57 +26,30 @@ type TypedSocket = Socket<
 export function registerChatHandlers(io: TypedServer, socket: TypedSocket) {
   const currentUser = socket.data.user;
 
-  // join a room per conversation the user belongs to (for scoped broadcast)
   joinUserConversationRooms(socket);
 
+  // lekin frontend ko REST use karna chahiye reliability ke liye.
   socket.on("message:send", async (payload: SendMessagePayload) => {
     try {
-      const conversation = await Conversation.findById(payload.conversationId);
-
-      if (!conversation) {
-        throw new AppError("Conversation not found", 404);
-      }
-
-      // security: sender must be a member of this conversation
-      if (!conversation.members.some((m) => m.toString() === currentUser.id)) {
-        throw new AppError("Not a member of this conversation", 403);
-      }
-
-      // security: conversation must belong to the same clinic
-      if (conversation.clinicId !== currentUser.clinicId) {
-        throw new AppError("Cross-clinic access denied", 403);
-      }
-
-      const message = await Message.create({
-        conversationId: conversation._id,
+      const { conversation, isNewConversation } = await sendMessage({
         senderId: currentUser.id,
         clinicId: currentUser.clinicId,
+        conversationId: payload.conversationId,
+        recipientId: payload.recipientId,
         text: payload.text,
-        attachments: payload.attachments || [],
+        attachments: payload.attachments,
         replyTo: payload.replyTo,
-        status: "sent",
       });
 
-      conversation.lastMessage = message._id;
-      conversation.lastMessageAt = new Date();
-      await conversation.save();
-
-      // broadcast to everyone in the conversation room (including sender, for multi-device sync)
-      io.to(`conversation:${conversation._id}`).emit("message:new", {
-        _id: message._id.toString(),
-        conversationId: conversation._id.toString(),
-        senderId: currentUser.id,
-        text: message.text,
-        attachments: message.attachments,
-        status: message.status,
-        replyTo: message.replyTo?.toString(),
-        createdAt: message.createdAt.toISOString(),
-      });
+      if (isNewConversation) {
+        socket.join(`conversation:${conversation._id}`);
+      }
+      // broadcast already sendMessage() ke andar ho chuka hai
     } catch (err) {
       logger.warn({ err, userId: currentUser.id }, "message:send failed");
       const errMessage =
         err instanceof AppError ? err.message : "Failed to send message";
-      socket.emit("error", { context: "message:send", message: errMessage }); // ✅ fixed
+      socket.emit("error", { context: "message:send", message: errMessage });
     }
   });
 
@@ -98,18 +74,22 @@ export function registerChatHandlers(io: TypedServer, socket: TypedSocket) {
       socket.emit("error", {
         context: "message:markRead",
         message: "Failed to mark message as read",
-      }); // ✅ fixed
+      });
     }
   });
 
-  socket.on("typing:start", (payload) => {
+  socket.on("typing:start", (payload: TypingPayload) => {
+    logger.info({ payload }, "typing:start");
+
+    if (!payload.conversationId) return;
     socket.to(`conversation:${payload.conversationId}`).emit("typing:start", {
       conversationId: payload.conversationId,
       userId: currentUser.id,
     });
   });
 
-  socket.on("typing:stop", (payload) => {
+  socket.on("typing:stop", (payload: TypingPayload) => {
+    if (!payload.conversationId) return;
     socket.to(`conversation:${payload.conversationId}`).emit("typing:stop", {
       conversationId: payload.conversationId,
       userId: currentUser.id,
@@ -117,7 +97,6 @@ export function registerChatHandlers(io: TypedServer, socket: TypedSocket) {
   });
 }
 
-// helper - user ke saare conversations ke socket rooms me join karwa do connect hote hi
 async function joinUserConversationRooms(socket: TypedSocket) {
   const conversations = await Conversation.find({
     members: socket.data.user.id,

@@ -1,29 +1,102 @@
 // src/components/chat/MessageList.tsx
-import { useEffect, useRef } from "react";
-import { MessageCircle, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { MessageCircle, Send, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import MessageBubble from "./MessageBubble";
+import TypingIndicator from "./TypingIndicator";
+import ForwardMessageDialog from "./ForwardMessageDialog";
 import type { MessageDTO } from "@/types/message.types";
+import { useChatStore } from "@/store/chatStore";
+import { useAuth } from "@/context/AuthContext";
 
 interface MessageListProps {
   messages: MessageDTO[];
   isLoading: boolean;
+  isFetchingOlder: boolean;
+  hasMoreOlder: boolean;
+  onLoadOlder: () => void;
   currentUserId: string;
   recipientName?: string;
+  isOtherUserTyping?: boolean;
+  typingUserName?: string;
+  typingUserAvatarUrl?: string;
+  showTypingAvatar?: boolean;
 }
 
 const MessageList = ({
   messages,
   isLoading,
+  isFetchingOlder,
+  hasMoreOlder,
+  onLoadOlder,
   currentUserId,
   recipientName,
+  isOtherUserTyping,
+  typingUserName,
+  typingUserAvatarUrl,
+  showTypingAvatar,
 }: MessageListProps) => {
+  const { user } = useAuth();
+  const selectedConversation = useChatStore((s) => s.selectedConversation);
+  const setReplyingTo = useChatStore((s) => s.setReplyingTo);
+  const isGroup = selectedConversation?.type === "group";
+
   const bottomRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const isFirstLoad = useRef(true);
+
+  const [forwardMessageId, setForwardMessageId] = useState<string | null>(null);
+
+  const isGroupType = selectedConversation?.type === "group";
+  const isCurrentUserAdmin =
+    selectedConversation?.admins?.includes(user?.id || "") ?? false;
+  const canPin = isGroupType ? isCurrentUserAdmin : true;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    if (isFirstLoad.current && messages.length > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      isFirstLoad.current = false;
+    } else if (!isFetchingOlder) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length, isOtherUserTyping]);
+
+  useEffect(() => {
+    if (!topSentinelRef.current || !hasMoreOlder) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingOlder) {
+          onLoadOlder();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(topSentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMoreOlder, isFetchingOlder, onLoadOlder]);
+
+  // reply hone wale message ka text/sender-name nikalne ka helper
+  const getReplyPreview = (replyToId?: string) => {
+    if (!replyToId) return null;
+    const repliedMessage = messages.find((m) => m._id === replyToId);
+    if (!repliedMessage) return null;
+
+    return {
+      text: repliedMessage.text || "Attachment",
+      senderName: repliedMessage.senderId.name,
+    };
+  };
+
+  const handleReply = (msg: MessageDTO) => {
+    setReplyingTo({
+      messageId: msg._id,
+      text: msg.text,
+      senderName: msg.senderId.name,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -40,7 +113,7 @@ const MessageList = ({
     );
   }
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !isOtherUserTyping) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <div className="relative flex h-20 w-20 items-center justify-center">
@@ -52,7 +125,6 @@ const MessageList = ({
             />
           </div>
         </div>
-
         <div className="space-y-1.5">
           <p className="text-base font-semibold tracking-tight text-foreground">
             {recipientName
@@ -64,7 +136,6 @@ const MessageList = ({
             started.
           </p>
         </div>
-
         <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">
           <Send className="h-3 w-3" />
           <span>Type below to send your first message</span>
@@ -74,20 +145,76 @@ const MessageList = ({
   }
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="flex flex-col gap-2 p-4">
-        {messages.map((msg) => (
-          <MessageBubble
-            key={msg._id}
-            text={msg.text}
-            createdAt={msg.createdAt}
-            status={msg.status}
-            isOwn={msg.senderId === currentUserId}
-          />
-        ))}
-        <div ref={bottomRef} />
-      </div>
-    </ScrollArea>
+    <>
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-2 p-4">
+          {hasMoreOlder && (
+            <div ref={topSentinelRef} className="flex justify-center py-2">
+              {isFetchingOlder && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
+          )}
+
+          {messages.map((msg, _index: number) => {
+            const isOwn = msg.senderId._id === currentUserId;
+            // const prevMsg = messages[index - 1];
+            // const nextMsg =
+            //   index < messages.length - 1 ? messages[index + 1] : undefined;
+            const showAvatar = isGroup && !isOwn;
+            //   &&
+            //   (!nextMsg || nextMsg.senderId._id !== msg.senderId._id);
+            const senderInfo = isGroup ? msg.senderId : undefined;
+            const replyPreview = getReplyPreview(msg.replyTo);
+
+            console.log({ canPin, isPinned: msg.isPinned ?? false });
+
+            return (
+              <MessageBubble
+                key={msg._id}
+                messageId={msg._id}
+                text={msg.text}
+                attachments={msg.attachments}
+                createdAt={msg.createdAt}
+                status={msg.status}
+                isOwn={isOwn}
+                showAvatar={showAvatar}
+                senderName={senderInfo?.name}
+                senderAvatarUrl={senderInfo?.avatarUrl}
+                reactions={msg.reactions}
+                isEdited={msg.isEdited}
+                isDeleted={msg.isDeleted}
+                forwardedFrom={msg.forwardedFrom}
+                replyToText={replyPreview?.text}
+                replyToSenderName={replyPreview?.senderName}
+                currentUserId={currentUserId}
+                conversationId={selectedConversation?._id || ""}
+                isPinned={msg.isPinned ?? false}
+                canPin={canPin}
+                onReply={() => handleReply(msg)}
+                onForward={() => setForwardMessageId(msg._id)}
+              />
+            );
+          })}
+
+          {isOtherUserTyping && (
+            <TypingIndicator
+              showAvatar={showTypingAvatar}
+              typingUserName={typingUserName}
+              typingUserAvatarUrl={typingUserAvatarUrl}
+            />
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+      </ScrollArea>
+
+      <ForwardMessageDialog
+        messageId={forwardMessageId}
+        open={!!forwardMessageId}
+        onOpenChange={(open) => !open && setForwardMessageId(null)}
+      />
+    </>
   );
 };
 

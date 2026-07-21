@@ -39,6 +39,11 @@ export function initSocketServer(httpServer: http.Server) {
   return ioInstance;
 }
 
+// naya - REST controllers se socket broadcast karne ke liye
+export function getIO() {
+  return ioInstance;
+}
+
 export function forceDisconnectUser(userId: string) {
   if (!ioInstance) return;
   ioInstance.sockets.sockets.forEach((socket) => {

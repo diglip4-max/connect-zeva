@@ -4,7 +4,7 @@ import { SquarePen, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { UnifiedChatList } from "@/types/conversation.types";
+import type { Conversation, UnifiedChatList } from "@/types/conversation.types";
 import ConversationListItem from "./ConversationListItem";
 import StaffListItem from "./StaffListItem";
 import ConversationSkeleton from "./ConversationSkeleton";
@@ -15,8 +15,9 @@ interface ConversationListProps {
   isLoading: boolean;
   activeConversationId: string | null;
   activeRecipientId: string | null;
-  onSelectConversation: (id: string) => void;
+  onSelectConversation: (conversation: Conversation) => void;
   onSelectStaff: (userId: string) => void;
+  onCreateGroup: () => void;
 }
 
 const ConversationList = ({
@@ -26,6 +27,7 @@ const ConversationList = ({
   activeRecipientId,
   onSelectConversation,
   onSelectStaff,
+  onCreateGroup,
 }: ConversationListProps) => {
   const [search, setSearch] = useState("");
 
@@ -47,10 +49,16 @@ const ConversationList = ({
   const isEmpty = !hasConversations && !hasStaff;
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-r border-border/60 bg-card/30">
+    <aside className="flex w-full shrink-0 flex-col border-r border-border/60 bg-card/30">
       <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-4">
         <h2 className="text-base font-semibold tracking-tight">Chats</h2>
-        <Button variant="ghost" size="icon-sm" title="Search staff">
+        <Button
+          variant="ghost"
+          size="icon"
+          title="New group"
+          onClick={onCreateGroup}
+          className={"rounded-sm"}
+        >
           <SquarePen className="h-4 w-4" />
         </Button>
       </div>

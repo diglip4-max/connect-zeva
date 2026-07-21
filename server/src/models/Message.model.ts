@@ -11,15 +11,27 @@ export interface IAttachment {
   mimeType: string;
 }
 
+export interface IReaction {
+  userId: Types.ObjectId;
+  emoji: string;
+}
+
 export interface IMessage extends Document {
   conversationId: Types.ObjectId;
   senderId: Types.ObjectId;
   clinicId: string; // denormalized for fast scoped queries
   text?: string;
+  links: string[];
   attachments: IAttachment[];
   status: "sent" | "delivered" | "read";
   readBy: Types.ObjectId[]; // for group chat read receipts
   replyTo?: Types.ObjectId; // reply/quote reference
+  forwardedFrom?: Types.ObjectId; // naya - original message reference agar forward hua ho
+  reactions: IReaction[]; // naya
+  mentions: Types.ObjectId[]; // naya - mentioned userIds
+  isPinned: boolean; // naya
+  pinnedBy?: Types.ObjectId; // naya
+  pinnedAt?: Date; // naya
   isEdited: boolean;
   isDeleted: boolean;
   deletedForEveryone: boolean;
@@ -42,6 +54,14 @@ const attachmentSchema = new Schema<IAttachment>(
   { _id: false },
 );
 
+const reactionSchema = new Schema<IReaction>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    emoji: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const messageSchema = new Schema<IMessage>(
   {
     conversationId: {
@@ -53,6 +73,7 @@ const messageSchema = new Schema<IMessage>(
     senderId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     clinicId: { type: String, required: true, index: true },
     text: { type: String },
+    links: { type: [String], default: [] },
     attachments: { type: [attachmentSchema], default: [] },
     status: {
       type: String,
@@ -61,6 +82,12 @@ const messageSchema = new Schema<IMessage>(
     },
     readBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
     replyTo: { type: Schema.Types.ObjectId, ref: "Message" },
+    forwardedFrom: { type: Schema.Types.ObjectId, ref: "Message" }, // naya
+    reactions: { type: [reactionSchema], default: [] }, // naya
+    mentions: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    isPinned: { type: Boolean, default: false },
+    pinnedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    pinnedAt: { type: Date },
     isEdited: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     deletedForEveryone: { type: Boolean, default: false },

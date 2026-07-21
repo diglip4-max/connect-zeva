@@ -22,7 +22,7 @@ export async function getUnifiedChatList(
       match: { isActive: true }, // deactivated members ko populate hi mat karo
     })
     .populate("lastMessage")
-    .sort({ lastMessageAt: -1 });
+    .sort({ lastMessageAt: -1, createdAt: -1 });
 
   // direct conversations jinka doosra member ab deactivated ho chuka hai, unhe filter kar do
   const validConversations = conversations.filter((c) => {
@@ -93,4 +93,189 @@ export async function findOrCreateDirectConversation(
     members: [currentUserId, otherUserId],
     createdBy: currentUserId,
   });
+}
+
+export async function createGroupConversation(
+  creatorId: string,
+  clinicId: string,
+  groupName: string,
+  memberIds: string[],
+) {
+  if (!groupName?.trim()) {
+    throw new AppError("Group name is required", 400);
+  }
+  if (memberIds.length < 2) {
+    throw new AppError("A group needs at least 2 other members", 400);
+  }
+
+  // confirm sab members isi clinic ke active staff hain
+  const validMembers = await User.find({
+    _id: { $in: memberIds },
+    clinicId,
+    isActive: true,
+  }).select("_id");
+
+  if (validMembers.length !== memberIds.length) {
+    throw new AppError("Some selected members are not available", 400);
+  }
+
+  const allMembers = [...new Set([creatorId, ...memberIds])];
+
+  return Conversation.create({
+    clinicId,
+    type: "group",
+    groupName: groupName.trim(),
+    members: allMembers,
+    admins: [creatorId],
+    createdBy: creatorId,
+  });
+}
+
+//
+export async function makeGroupAdmin(
+  conversationId: string,
+  requesterId: string,
+  targetUserId: string,
+) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation || conversation.type !== "group") {
+    throw new AppError("Group not found", 404);
+  }
+  if (!conversation?.admins?.some((a) => a.toString() === requesterId)) {
+    throw new AppError("Only admins can perform this action", 403);
+  }
+  if (!conversation?.admins?.some((a) => a.toString() === targetUserId)) {
+    conversation.admins.push(targetUserId as any);
+    await conversation.save();
+  }
+  return conversation;
+}
+
+export async function removeGroupAdmin(
+  conversationId: string,
+  requesterId: string,
+  targetUserId: string,
+) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation || conversation.type !== "group") {
+    throw new AppError("Group not found", 404);
+  }
+  if (!conversation?.admins?.some((a) => a.toString() === requesterId)) {
+    throw new AppError("Only admins can perform this action", 403);
+  }
+  conversation.admins = conversation?.admins?.filter(
+    (a) => a.toString() !== targetUserId,
+  );
+  await conversation.save();
+  return conversation;
+}
+
+export async function removeGroupMember(
+  conversationId: string,
+  requesterId: string,
+  targetUserId: string,
+) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation || conversation.type !== "group") {
+    throw new AppError("Group not found", 404);
+  }
+  if (!conversation?.admins?.some((a) => a.toString() === requesterId)) {
+    throw new AppError("Only admins can perform this action", 403);
+  }
+  if (targetUserId === requesterId) {
+    throw new AppError("Use leave group instead", 400);
+  }
+  conversation.members = conversation.members.filter(
+    (m) => m.toString() !== targetUserId,
+  );
+  conversation.admins = conversation?.admins?.filter(
+    (a) => a.toString() !== targetUserId,
+  );
+  await conversation.save();
+  return conversation;
+}
+
+export async function toggleMuteConversation(
+  conversationId: string,
+  userId: string,
+) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) throw new AppError("Conversation not found", 404);
+  if (!conversation.members.some((m) => m.toString() === userId)) {
+    throw new AppError("Not a member of this conversation", 403);
+  }
+
+  const isMuted = conversation.mutedBy.some((m) => m.toString() === userId);
+  if (isMuted) {
+    conversation.mutedBy = conversation.mutedBy.filter(
+      (m) => m.toString() !== userId,
+    );
+  } else {
+    conversation.mutedBy.push(userId as any);
+  }
+
+  await conversation.save();
+  return conversation;
+}
+
+export async function addGroupMembers(
+  conversationId: string,
+  requesterId: string,
+  newMemberIds: string[],
+) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation || conversation.type !== "group") {
+    throw new AppError("Group not found", 404);
+  }
+  if (!conversation?.admins?.some((a) => a.toString() === requesterId)) {
+    throw new AppError("Only admins can add members", 403);
+  }
+
+  const uniqueNewMembers = newMemberIds.filter(
+    (id) => !conversation.members.some((m) => m.toString() === id),
+  );
+
+  conversation.members.push(...(uniqueNewMembers as any));
+  await conversation.save();
+  return conversation;
+}
+
+export async function searchPeopleAndConversations(
+  userId: string,
+  clinicId: string,
+  query: string,
+) {
+  const staff = await User.find({
+    clinicId,
+    isActive: true,
+    _id: { $ne: userId },
+    name: { $regex: query, $options: "i" },
+  })
+    .select("_id name avatarUrl role isOnline")
+    .limit(15)
+    .lean();
+
+  const staffIds = staff.map((s) => s._id);
+
+  const conversations = await Conversation.find({
+    clinicId,
+    members: userId, // User must be a member of the conversation
+    $or: [
+      // Group conversations with groupName matching
+      {
+        type: "group",
+        groupName: { $regex: query, $options: "i" },
+      },
+      // Direct conversations with staff members who match the query
+      {
+        type: "direct",
+        members: { $in: staffIds }, // Conversation contains at least one matching staff member
+      },
+    ],
+  })
+    .populate("members", "name avatarUrl")
+    .limit(15)
+    .lean();
+
+  return { people: staff, conversations };
 }

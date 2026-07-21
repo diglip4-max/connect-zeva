@@ -6,6 +6,7 @@ export interface Conversation {
     _id: string;
     name: string;
     avatarUrl?: string;
+    role: string;
     isOnline: boolean;
   }[];
   groupName?: string;
@@ -13,6 +14,7 @@ export interface Conversation {
   lastMessage?: { text?: string };
   lastMessageAt?: string;
   unreadCount?: number;
+  admins?: string[];
 }
 
 export interface StaffMember {
@@ -26,4 +28,12 @@ export interface StaffMember {
 export interface UnifiedChatList {
   conversations: Conversation[];
   staffWithoutConversation: StaffMember[];
+}
+
+export interface ConversationMember {
+  _id: string;
+  name: string;
+  avatarUrl?: string;
+  role: string;
+  isOnline: boolean;
 }

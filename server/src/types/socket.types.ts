@@ -2,7 +2,16 @@
 export interface MessageDTO {
   _id: string;
   conversationId: string;
-  senderId: string;
+  senderId: {
+    _id: string;
+    clinicId: string;
+    role: string;
+    name: string;
+    avatarUrl: string;
+    isOnline: boolean;
+    lastSeenAt: Date;
+    zevaUserId: string;
+  };
   text?: string;
   attachments: {
     url: string;
@@ -13,11 +22,31 @@ export interface MessageDTO {
   }[];
   status: "sent" | "delivered" | "read";
   replyTo?: string;
+  forwardedFrom?: string;
   createdAt: string;
+}
+
+export interface ConversationDTO {
+  _id: string;
+  type: "direct" | "group";
+  members: {
+    _id: string;
+    name: string;
+    avatarUrl?: string;
+    role: string;
+    isOnline: boolean;
+  }[];
+  groupName?: string;
+  groupAvatarUrl?: string;
+  lastMessage?: { text?: string };
+  lastMessageAt?: string;
+  unreadCount?: number;
+  admins?: string[];
 }
 
 export interface SendMessagePayload {
   conversationId: string;
+  recipientId?: string;
   text?: string;
   attachments?: MessageDTO["attachments"];
   replyTo?: string;
@@ -35,6 +64,7 @@ export interface ReadReceiptPayload {
 // Server -> Client events
 export interface ServerToClientEvents {
   "message:new": (msg: MessageDTO) => void;
+  "conversation:new": (conv: ConversationDTO) => void;
   "message:read": (data: {
     conversationId: string;
     messageId: string;
@@ -45,6 +75,30 @@ export interface ServerToClientEvents {
   "user:online": (userId: string) => void;
   "user:offline": (userId: string) => void;
   "force:logout": (data: { reason: string }) => void;
+  "message:reaction": (data: {
+    messageId: string;
+    reactions: { userId: string; emoji: string }[];
+  }) => void;
+  "message:edited": (data: {
+    messageId: string;
+    text?: string;
+    isEdited: boolean;
+  }) => void;
+  "message:deleted": (data: {
+    messageId: string;
+    deletedForEveryone: boolean;
+  }) => void;
+  "message:pinned": (data: { messageId: string; isPinned: boolean }) => void;
+  "conversation:membersAdded": (data: {
+    conversationId: string;
+    members: {
+      _id: string;
+      name: string;
+      avatarUrl?: string;
+      role: string;
+      isOnline: boolean;
+    }[];
+  }) => void;
   error: (data: { context: string; message: string }) => void;
 }
 

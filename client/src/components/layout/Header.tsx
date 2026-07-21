@@ -1,9 +1,18 @@
+// src/components/layout/Header.tsx
 import { useNavigate } from "react-router-dom";
-import { LogOut, Settings, MessageSquare } from "lucide-react";
+import {
+  LogOut,
+  Settings,
+  MessageSquare,
+  Menu,
+  // Search
+} from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSocketContext } from "@/context/SocketContext";
+import { useUIStore } from "@/store/uiStore";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,8 +22,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import React from "react";
+import GlobalSearchDialog from "../chat/GlobalSearchDialog";
 
-// naam se initials nikalne ke liye - avatar fallback me use hoga
 function getInitials(name: string) {
   return name
     ?.trim()
@@ -29,8 +39,10 @@ const Header = () => {
   const { user, logout } = useAuth();
   const { isConnected } = useSocketContext();
   const navigate = useNavigate();
+  const toggleMobileSidebar = useUIStore((s) => s.toggleMobileSidebar);
 
-  console.log({ user });
+  const [isOpenGlobalSearchModal, setIsOpenGlobalSearchModal] =
+    React.useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -40,19 +52,28 @@ const Header = () => {
   if (!user) return null;
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border/60 bg-card/50 px-4 backdrop-blur-sm">
-      {/* Left: Brand */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+    <header className="flex h-16 items-center justify-between border-b border-border/60 bg-card/50 px-3 backdrop-blur-sm md:px-4">
+      {/* Left: Hamburger (mobile only) + Brand */}
+      <div className="flex min-w-0 items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 md:hidden"
+          onClick={toggleMobileSidebar}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
           <MessageSquare className="h-4 w-4 text-primary-foreground" />
         </div>
-        <span className="text-sm font-semibold tracking-tight">
+        <span className="truncate text-sm font-semibold tracking-tight">
           Zeva Connect
         </span>
 
-        {/* connection status indicator */}
+        {/* connection status indicator - text hidden on very small screens */}
         <span
-          className={`ml-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+          className={`ml-1 hidden shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs sm:flex ${
             isConnected
               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
               : "bg-muted text-muted-foreground"
@@ -65,10 +86,24 @@ const Header = () => {
           />
           {isConnected ? "Connected" : "Connecting..."}
         </span>
+        {/* mobile ke liye - sirf dot, text nahi */}
+        <span
+          className={`h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${
+            isConnected ? "bg-emerald-500" : "bg-muted-foreground"
+          }`}
+        />
       </div>
 
       {/* Right: Theme toggle + user menu */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1 md:gap-2">
+        {/* <Button
+          onClick={() => setIsOpenGlobalSearchModal(true)}
+          variant="ghost"
+          size="icon"
+        >
+          <Search className="h-5 w-5 transition-all" />
+        </Button> */}
+
         <ThemeToggle />
 
         <DropdownMenu>
@@ -91,7 +126,6 @@ const Header = () => {
                   {user.role}
                 </span>
               </DropdownMenuLabel>
-
               <DropdownMenuSeparator />
             </DropdownMenuGroup>
 
@@ -112,6 +146,12 @@ const Header = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Global Search Dialog */}
+      <GlobalSearchDialog
+        open={isOpenGlobalSearchModal}
+        onOpenChange={setIsOpenGlobalSearchModal}
+      />
     </header>
   );
 };

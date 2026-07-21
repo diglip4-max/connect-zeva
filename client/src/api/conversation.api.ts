@@ -10,3 +10,58 @@ export const fetchChatList = async (): Promise<UnifiedChatList> => {
   }>("/conversations");
   return data.data;
 };
+
+export const createGroupConversation = async (
+  groupName: string,
+  memberIds: string[],
+) => {
+  const { data } = await axiosClient.post("/conversations/group", {
+    groupName,
+    memberIds,
+  });
+  return data.data;
+};
+
+export const makeGroupAdmin = async (
+  conversationId: string,
+  userId: string,
+) => {
+  const { data } = await axiosClient.post("/conversations/group/make-admin", {
+    conversationId,
+    userId,
+  });
+  return data.data;
+};
+
+export const removeGroupAdmin = async (
+  conversationId: string,
+  userId: string,
+) => {
+  const { data } = await axiosClient.post("/conversations/group/remove-admin", {
+    conversationId,
+    userId,
+  });
+  return data.data;
+};
+
+export const addGroupMembers = async (
+  conversationId: string,
+  memberIds: string[],
+) => {
+  const { data } = await axiosClient.post("/conversations/group/add-members", {
+    conversationId,
+    memberIds,
+  });
+  return data.data;
+};
+
+export const removeGroupMember = async (
+  conversationId: string,
+  userId: string,
+) => {
+  const { data } = await axiosClient.post(
+    "/conversations/group/remove-member",
+    { conversationId, userId },
+  );
+  return data.data;
+};

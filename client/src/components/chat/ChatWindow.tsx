@@ -1,14 +1,23 @@
+// src/components/chat/ChatWindow.tsx
+import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useSocketEvent } from "@/hooks/useSocket";
+import { useSocketContext } from "@/context/SocketContext";
 import { useChatStore } from "@/store/chatStore";
 import { useMessages } from "@/hooks/useMessages";
+import { getInitials } from "@/lib/formatDate";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import TypingIndicator from "./TypingIndicator";
-import type { MessageDTO } from "@/types/message.types";
-import { getInitials } from "@/lib/formatDate";
+import type { MessageDTO, Reaction } from "@/types/message.types";
+import { useUIStore } from "@/store/uiStore";
+import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Info } from "lucide-react";
+import PinnedMessagesBar from "./PinnedMessagesBar";
+
+const EMPTY_TYPING_ARRAY: string[] = [];
 
 interface ChatWindowProps {
   conversationId: string | null;
@@ -16,85 +25,10 @@ interface ChatWindowProps {
   displayName: string;
   avatarUrl?: string;
   isOnline?: boolean;
+  conversationType?: string;
+  onlineCount?: number;
+  onBack?: () => void; // naya - mobile back button ke liye
 }
-
-const EMPTY_TYPING_ARRAY: string[] = []; // module-level, ek hi baar banta hai
-
-// Test ke liye - temporarily ChatWindow.tsx ya kahin bhi use kar sakta hai
-export const sampleMessages: MessageDTO[] = [
-  {
-    _id: "msg_001",
-    conversationId: "conv_test_123",
-    senderId: "user_other_456", // doosra user
-    text: "Hey, are you available for the patient consultation at 3 PM today?",
-    attachments: [],
-    status: "read",
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 min pehle
-  },
-  {
-    _id: "msg_002",
-    conversationId: "conv_test_123",
-    senderId: "user_me_789", // apna user (current logged in)
-    text: "Yes, I'll be there. Just finishing up with another patient.",
-    attachments: [],
-    status: "read",
-    createdAt: new Date(Date.now() - 1000 * 60 * 43).toISOString(),
-  },
-  {
-    _id: "msg_003",
-    conversationId: "conv_test_123",
-    senderId: "user_other_456",
-    text: "Perfect, thanks! Also, can you check the lab reports for Mr. Sharma before the consultation?",
-    attachments: [],
-    status: "read",
-    createdAt: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
-  },
-  {
-    _id: "msg_004",
-    conversationId: "conv_test_123",
-    senderId: "user_me_789",
-    text: "Sure, I'll go through them now.",
-    attachments: [],
-    status: "read",
-    createdAt: new Date(Date.now() - 1000 * 60 * 38).toISOString(),
-  },
-  {
-    _id: "msg_005",
-    conversationId: "conv_test_123",
-    senderId: "user_other_456",
-    text: "Great, let me know if you find anything concerning.",
-    attachments: [],
-    status: "delivered",
-    createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-  },
-  {
-    _id: "msg_006",
-    conversationId: "conv_test_123",
-    senderId: "user_me_789",
-    text: "Reports look fine overall, just a slightly elevated WBC count. Nothing alarming, we'll monitor it.",
-    attachments: [],
-    status: "delivered",
-    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-  },
-  {
-    _id: "msg_007",
-    conversationId: "conv_test_123",
-    senderId: "user_other_456",
-    text: "Got it. See you at 3!",
-    attachments: [],
-    status: "sent",
-    createdAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-  },
-  {
-    _id: "msg_008",
-    conversationId: "conv_test_123",
-    senderId: "user_me_789",
-    text: "👍",
-    attachments: [],
-    status: "sent",
-    createdAt: new Date(Date.now() - 1000 * 30).toISOString(), // 30 sec pehle
-  },
-];
 
 const ChatWindow = ({
   conversationId,
@@ -102,14 +36,29 @@ const ChatWindow = ({
   displayName,
   avatarUrl,
   isOnline,
+  conversationType,
+  onlineCount = 0,
+  onBack,
 }: ChatWindowProps) => {
   const { user } = useAuth();
+  const { socket } = useSocketContext();
   const queryClient = useQueryClient();
 
   const addMessage = useChatStore((s) => s.addMessage);
+  const setTyping = useChatStore((s) => s.setTyping);
+  const updateMessageStatus = useChatStore((s) => s.updateMessageStatus);
+  const updateMessageReactions = useChatStore((s) => s.updateMessageReactions);
+  const updateMessageText = useChatStore((s) => s.updateMessageText);
+  const updateConversationMembers = useChatStore(
+    (s) => s.updateConversationMembers,
+  );
+  const markMessageDeleted = useChatStore((s) => s.markMessageDeleted);
   const resolvePendingToConversation = useChatStore(
     (s) => s.resolvePendingToConversation,
   );
+
+  const isInfoPanelOpen = useUIStore((s) => s.isInfoPanelOpen);
+  const toggleInfoPanel = useUIStore((s) => s.toggleInfoPanel);
 
   const typingUsers = useChatStore((s) =>
     conversationId
@@ -117,55 +66,184 @@ const ChatWindow = ({
       : EMPTY_TYPING_ARRAY,
   );
 
-  const { messages, isLoading } = useMessages(conversationId);
+  const {
+    messages,
+    isLoading,
+    isFetchingOlder,
+    hasMoreOlder,
+    loadOlderMessages,
+  } = useMessages(conversationId);
 
-  const otherUserTyping = typingUsers.some((id) => id !== user?.id);
+  const selectedConversation = useChatStore((s) => s.selectedConversation);
+  const isGroup = selectedConversation?.type === "group";
 
-  // real-time: naya message aaye
+  // typingUsers already tere paas hai (array of userIds)
+  const otherTypingUserId = typingUsers.find((id) => id !== user?.id);
+  const otherUserTyping = !!otherTypingUserId;
+
+  // group ke case me, typing kar rahe user ka naam/avatar members se nikालो
+  const typingMember = isGroup
+    ? selectedConversation?.members.find((m) => m._id === otherTypingUserId)
+    : undefined;
+
   useSocketEvent<MessageDTO>("message:new", (msg) => {
     addMessage(msg.conversationId, msg);
-
-    // agar yeh "pending recipient" flow tha (conversation abhi tak exist nahi karta tha),
-    // ab backend ne naya conversationId de diya hai - state ko resolve karo
     if (recipientId && !conversationId) {
       resolvePendingToConversation(msg.conversationId);
     }
-
     queryClient.invalidateQueries({ queryKey: ["chat-list"] });
   });
+
+  useSocketEvent<{ conversationId: string; userId: string }>(
+    "typing:start",
+    (data) => {
+      console.log({ TypingData: data });
+      setTyping(data.conversationId, data.userId, true);
+    },
+  );
+
+  useSocketEvent<{ conversationId: string; userId: string }>(
+    "typing:stop",
+    (data) => {
+      setTyping(data.conversationId, data.userId, false);
+    },
+  );
+
+  useSocketEvent<{ conversationId: string; messageId: string; userId: string }>(
+    "message:read",
+    (data) => {
+      updateMessageStatus(data.conversationId, data.messageId, "read");
+    },
+  );
+
+  //   Other message events
+  useSocketEvent<{ messageId: string; reactions: Reaction[] }>(
+    "message:reaction",
+    (data) => {
+      if (conversationId)
+        updateMessageReactions(conversationId, data.messageId, data.reactions);
+    },
+  );
+
+  useSocketEvent<{ messageId: string; text?: string }>(
+    "message:edited",
+    (data) => {
+      if (conversationId && data.text)
+        updateMessageText(conversationId, data.messageId, data.text);
+    },
+  );
+
+  useSocketEvent<{ messageId: string }>("message:deleted", (data) => {
+    if (conversationId) markMessageDeleted(conversationId, data.messageId);
+  });
+
+  useSocketEvent<{
+    conversationId: string;
+    members: {
+      _id: string;
+      name: string;
+      avatarUrl?: string;
+      role: string;
+      isOnline: boolean;
+    }[];
+  }>("conversation:membersAdded", (data) => {
+    if (data.conversationId === conversationId) {
+      // selectedConversation store me members update karo
+      updateConversationMembers(conversationId, data.members);
+    }
+  });
+
+  useEffect(() => {
+    if (!conversationId || !socket || messages.length === 0) return;
+
+    const unreadIds = messages
+      .filter((m) => m.senderId._id !== user?.id && m.status !== "read")
+      .map((m) => m._id);
+
+    unreadIds.forEach((messageId) => {
+      socket.emit("message:markRead", { conversationId, messageId });
+    });
+  }, [conversationId, messages.length, socket, user?.id]);
 
   if (!user) return null;
 
   return (
     <div className="flex h-full flex-1 flex-col">
-      {/* Chat header */}
+      {/* Header */}
       <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src={avatarUrl} alt={displayName} />
-          <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
-            {getInitials(displayName)}
-          </AvatarFallback>
-        </Avatar>
+        {/* Back button - sirf mobile pe dikhega */}
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onBack}
+            className="shrink-0 md:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
+
+        <div className="relative">
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+              {getInitials(displayName)}
+            </AvatarFallback>
+          </Avatar>
+          {isOnline && conversationType === "direct" && (
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{displayName}</p>
-          {isOnline !== undefined && (
+          {isOnline !== undefined && conversationType === "direct" && (
             <p className="text-xs text-muted-foreground">
               {isOnline ? "Online" : "Offline"}
             </p>
           )}
+          {typingMember?.name && conversationType === "group" ? (
+            <p className="text-xs text-primary">
+              {typingMember?.name} is typing...
+            </p>
+          ) : (
+            onlineCount > 0 &&
+            conversationType === "group" && (
+              <p className="text-xs text-muted-foreground">
+                {onlineCount} online
+              </p>
+            )
+          )}
         </div>
+
+        {!isInfoPanelOpen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleInfoPanel}
+            className={cn("rounded-sm", isInfoPanelOpen && "bg-muted")}
+          >
+            <Info className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
       </div>
 
-      {/* Messages */}
+      {/* Pinned messages bar */}
+      {conversationId && <PinnedMessagesBar conversationId={conversationId} />}
+
       <MessageList
         messages={messages}
         isLoading={isLoading}
+        isFetchingOlder={isFetchingOlder}
+        hasMoreOlder={!!hasMoreOlder}
+        onLoadOlder={loadOlderMessages}
         currentUserId={user.id}
+        recipientName={recipientId ? displayName : undefined}
+        isOtherUserTyping={otherUserTyping}
+        showTypingAvatar={isGroup}
+        typingUserName={typingMember?.name}
+        typingUserAvatarUrl={typingMember?.avatarUrl}
       />
 
-      {otherUserTyping && <TypingIndicator />}
-
-      {/* Input */}
       <MessageInput conversationId={conversationId} recipientId={recipientId} />
     </div>
   );

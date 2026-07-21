@@ -3,10 +3,14 @@ import authRoutes from "./auth.routes";
 import internalRoutes from "./internal.routes";
 import userRoutes from "./user.routes";
 import conversationRoutes from "./conversation.routes";
+import messageRoutes from "./message.routes";
+import pushRoutes from "./push.routes";
+import uploadRoutes from "./upload.routes";
 
+// router setup
 const router: Router = express.Router();
 
-router.get("/api/health", (req, res) => res.json({ status: "ok" }));
+router.get("/health", (req, res) => res.json({ status: "ok" }));
 
 // auth routes
 router.use("/auth", authRoutes);
@@ -19,5 +23,14 @@ router.use("/users", userRoutes);
 
 // conversation routes
 router.use("/conversations", conversationRoutes);
+
+// message routes
+router.use("/messages", messageRoutes);
+
+// push routes
+router.use("/push", pushRoutes);
+
+// upload routes
+router.use("/upload", uploadRoutes);
 
 export default router;
