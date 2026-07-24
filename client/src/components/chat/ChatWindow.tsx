@@ -153,17 +153,38 @@ const ChatWindow = ({
     }
   });
 
+  useSocketEvent<{
+    conversationId: string;
+    members: {
+      _id: string;
+      name: string;
+      avatarUrl?: string;
+      role: string;
+      isOnline: boolean;
+    }[];
+  }>("conversation:membersRemoved", (data) => {
+    if (data.conversationId === conversationId) {
+      // selectedConversation store me members update karo
+      updateConversationMembers(conversationId, data.members);
+    }
+  });
+
   useEffect(() => {
     if (!conversationId || !socket || messages.length === 0) return;
 
     const unreadIds = messages
-      .filter((m) => m.senderId._id !== user?.id && m.status !== "read")
+      .filter(
+        (m) => m.senderId._id !== user?.id && !m.readBy?.includes(user?.id),
+      )
       .map((m) => m._id);
 
     unreadIds.forEach((messageId) => {
       socket.emit("message:markRead", { conversationId, messageId });
+
+      // turant chat-list query bhi invalidate karo, taaki badge turant clear ho
+      queryClient.invalidateQueries({ queryKey: ["chat-list"] });
     });
-  }, [conversationId, messages.length, socket, user?.id]);
+  }, [conversationId, messages.length, socket, user?.id, queryClient]);
 
   if (!user) return null;
 

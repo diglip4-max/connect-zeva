@@ -741,7 +741,7 @@ const MessageInput = ({ conversationId, recipientId }: MessageInputProps) => {
                 onBlur={() => setIsFocused(false)}
                 placeholder="Type a message..."
                 rows={1}
-                className="max-h-32 min-h-[40px] resize-none border-0 bg-transparent px-2 py-2.5 text-sm leading-relaxed shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                className="w-full max-h-32 min-h-[40px] resize-none border-0 bg-transparent px-2 py-2.5 text-sm leading-relaxed shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
               />
             </MentionSuggestions>
           </div>

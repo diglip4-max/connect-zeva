@@ -15,6 +15,10 @@ interface ChatState {
   replyingTo: { messageId: string; text?: string; senderName: string } | null;
   setReplyingTo: (data: ChatState["replyingTo"]) => void;
 
+  //   Scroll to a specific message
+  scrollToMessageId: string | null;
+  setScrollToMessageId: (messageId: string | null) => void;
+
   selectConversation: (conversation: Conversation) => void;
   selectStaffRecipient: (userId: string) => void;
   clearActiveChat: () => void;
@@ -64,7 +68,9 @@ export const useChatStore = create<ChatState>((set, _get) => ({
   typingUsers: {},
   selectedConversation: null,
   replyingTo: null,
+  scrollToMessageId: null,
   setReplyingTo: (data) => set({ replyingTo: data }),
+  setScrollToMessageId: (messageId) => set({ scrollToMessageId: messageId }),
 
   selectConversation: (conversation) =>
     set({

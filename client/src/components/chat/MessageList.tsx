@@ -9,6 +9,7 @@ import ForwardMessageDialog from "./ForwardMessageDialog";
 import type { MessageDTO } from "@/types/message.types";
 import { useChatStore } from "@/store/chatStore";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
 
 interface MessageListProps {
   messages: MessageDTO[];
@@ -53,6 +54,12 @@ const MessageList = ({
     selectedConversation?.admins?.includes(user?.id || "") ?? false;
   const canPin = isGroupType ? isCurrentUserAdmin : true;
 
+  //   For Highlighting the message and scroll to a specific message
+  const scrollToMessageId = useChatStore((s) => s.scrollToMessageId);
+  const setScrollToMessageId = useChatStore((s) => s.setScrollToMessageId);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   useEffect(() => {
     if (isFirstLoad.current && messages.length > 0) {
       bottomRef.current?.scrollIntoView({ behavior: "auto" });
@@ -77,6 +84,33 @@ const MessageList = ({
     observer.observe(topSentinelRef.current);
     return () => observer.disconnect();
   }, [hasMoreOlder, isFetchingOlder, onLoadOlder]);
+
+  // useEffect - scrollToMessageId change hone par scroll+highlight karo
+  useEffect(() => {
+    if (!scrollToMessageId) return;
+
+    const targetElement = messageRefs.current[scrollToMessageId];
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedId(scrollToMessageId);
+
+      // 2 second baad highlight hata do
+      const timeout = setTimeout(() => {
+        setHighlightedId(null);
+        setScrollToMessageId(null); // reset, taaki dobara same message pe click karne pe re-trigger ho sake
+      }, 2000);
+
+      return () => clearTimeout(timeout);
+    } else {
+      // message abhi loaded nahi hai (purana, pagination se aana baaki hai)
+      console.warn(
+        "Message not currently loaded - would need to fetch older messages",
+      );
+      setScrollToMessageId(null);
+
+      //   onLoadOlder();
+    }
+  }, [scrollToMessageId, setScrollToMessageId]);
 
   // reply hone wale message ka text/sender-name nikalne ka helper
   const getReplyPreview = (replyToId?: string) => {
@@ -167,33 +201,43 @@ const MessageList = ({
             const senderInfo = isGroup ? msg.senderId : undefined;
             const replyPreview = getReplyPreview(msg.replyTo);
 
-            console.log({ canPin, isPinned: msg.isPinned ?? false });
+            const isHighlighted = highlightedId === msg._id;
 
             return (
-              <MessageBubble
+              <div
                 key={msg._id}
-                messageId={msg._id}
-                text={msg.text}
-                attachments={msg.attachments}
-                createdAt={msg.createdAt}
-                status={msg.status}
-                isOwn={isOwn}
-                showAvatar={showAvatar}
-                senderName={senderInfo?.name}
-                senderAvatarUrl={senderInfo?.avatarUrl}
-                reactions={msg.reactions}
-                isEdited={msg.isEdited}
-                isDeleted={msg.isDeleted}
-                forwardedFrom={msg.forwardedFrom}
-                replyToText={replyPreview?.text}
-                replyToSenderName={replyPreview?.senderName}
-                currentUserId={currentUserId}
-                conversationId={selectedConversation?._id || ""}
-                isPinned={msg.isPinned ?? false}
-                canPin={canPin}
-                onReply={() => handleReply(msg)}
-                onForward={() => setForwardMessageId(msg._id)}
-              />
+                ref={(el) => {
+                  messageRefs.current[msg._id] = el;
+                }}
+                className={cn(
+                  "rounded-2xl transition-colors duration-500",
+                  isHighlighted && "bg-primary/10",
+                )}
+              >
+                <MessageBubble
+                  messageId={msg._id}
+                  text={msg.text}
+                  attachments={msg.attachments}
+                  createdAt={msg.createdAt}
+                  status={msg.status}
+                  isOwn={isOwn}
+                  showAvatar={showAvatar}
+                  senderName={senderInfo?.name}
+                  senderAvatarUrl={senderInfo?.avatarUrl}
+                  reactions={msg.reactions}
+                  isEdited={msg.isEdited}
+                  isDeleted={msg.isDeleted}
+                  forwardedFrom={msg.forwardedFrom}
+                  replyToText={replyPreview?.text}
+                  replyToSenderName={replyPreview?.senderName}
+                  currentUserId={currentUserId}
+                  conversationId={selectedConversation?._id || ""}
+                  isPinned={msg.isPinned ?? false}
+                  canPin={canPin}
+                  onReply={() => handleReply(msg)}
+                  onForward={() => setForwardMessageId(msg._id)}
+                />
+              </div>
             );
           })}
 

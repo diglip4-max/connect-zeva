@@ -15,7 +15,6 @@ const ConversationListItem = ({
   onSelect,
 }: ConversationListItemProps) => {
   const { user } = useAuth();
-  console.log({ rU: user });
   const recipient = conversation.members.find(
     (member) => member._id !== user?.id,
   );
@@ -51,7 +50,9 @@ const ConversationListItem = ({
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-xs text-muted-foreground">
-            {conversation?.lastMessage?.text || "No messages yet"}
+            {conversation?.lastMessage?.text
+              ? conversation?.lastMessage?.text
+              : "No messages yet"}
           </span>
           {!!conversation.unreadCount && (
             <span className="flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">

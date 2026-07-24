@@ -456,3 +456,55 @@ export async function searchMessages(
       .lean()
   );
 }
+
+// src/services/message.service.ts (add these)
+export async function getSharedMedia(conversationId: string, userId: string) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) throw new AppError("Conversation not found", 404);
+  if (!conversation.members.some((m) => m.toString() === userId)) {
+    throw new AppError("Not a member of this conversation", 403);
+  }
+
+  const messages = await Message.find({
+    conversationId,
+    "attachments.type": { $in: ["image", "video"] },
+    isDeleted: { $ne: true },
+  })
+    .select("attachments createdAt senderId")
+    .sort({ createdAt: -1 })
+    .limit(60)
+    .lean();
+
+  // flatten karo - sirf image/video attachments
+  return messages.flatMap((msg) =>
+    msg.attachments
+      .filter((a) => a.type === "image" || a.type === "video")
+      .map((a) => ({ ...a, createdAt: msg.createdAt, messageId: msg._id })),
+  );
+}
+
+export async function getSharedFiles(conversationId: string, userId: string) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) throw new AppError("Conversation not found", 404);
+  if (!conversation.members.some((m) => m.toString() === userId)) {
+    throw new AppError("Not a member of this conversation", 403);
+  }
+
+  const messages = await Message.find({
+    conversationId,
+    "attachments.type": { $in: ["document", "file", "audio"] },
+    isDeleted: { $ne: true },
+  })
+    .select("attachments createdAt senderId")
+    .sort({ createdAt: -1 })
+    .limit(60)
+    .lean();
+
+  return messages.flatMap((msg) =>
+    msg.attachments
+      .filter(
+        (a) => a.type === "document" || a.type === "file" || a.type === "audio",
+      )
+      .map((a) => ({ ...a, createdAt: msg.createdAt, messageId: msg._id })),
+  );
+}

@@ -3,7 +3,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { SmilePlus } from "lucide-react";
+import { CirclePlus, SmilePlus } from "lucide-react";
+import EmojiPickerButton from "./EmojiPickerButton";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -29,6 +30,15 @@ const ReactionPicker = ({ onSelect }: ReactionPickerProps) => (
             {emoji}
           </button>
         ))}
+
+        <EmojiPickerButton
+          trigger={
+            <button className="flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:bg-muted hover:text-primary">
+              <CirclePlus className="h-4 w-4" />
+            </button>
+          }
+          onEmojiSelect={(emoji) => onSelect(emoji)}
+        />
       </div>
     </PopoverContent>
   </Popover>

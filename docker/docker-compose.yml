@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: zeva-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: zeva-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: zeva-messenger-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - ../server/.env
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/zeva-messenger
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+
+volumes:
+  mongo_data:

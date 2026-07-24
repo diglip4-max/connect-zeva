@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const SSOCallback = lazy(() => import("./pages/SSOCallback"));
 const AppLayout = lazy(() => import("./components/layout/AppLayout"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -87,6 +88,14 @@ const AppRouter = () => {
             element={
               <Suspense fallback={<PageLoader />}>
                 <ChatPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <SettingsPage />
               </Suspense>
             }
           />

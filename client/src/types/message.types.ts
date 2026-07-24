@@ -26,6 +26,8 @@ export interface MessageDTO {
   attachments: Attachment[];
   status: "sent" | "delivered" | "read";
   replyTo?: string;
+  readBy?: string[];
+  // populated preview ke liye
   replyToMessage?: { text?: string; senderName?: string }; // populated preview ke liye
   forwardedFrom?: string;
   reactions: Reaction[];
@@ -40,4 +42,23 @@ export interface SharedLinkEntry {
   url: string;
   createdAt: string;
   senderId: string;
+}
+
+export interface SharedMediaItem {
+  url: string;
+  type: "image" | "video";
+  fileName: string;
+  fileSize: number;
+  createdAt: string;
+  messageId: string;
+}
+
+export interface SharedFileItem {
+  url: string;
+  type: "document" | "file" | "audio";
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  createdAt: string;
+  messageId: string;
 }

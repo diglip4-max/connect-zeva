@@ -1,7 +1,8 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1",
+  //   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1",
+  baseURL: import.meta.env.PROD ? "/api/v1/" : "http://localhost:5000/api/v1",
   withCredentials: true, // zaroori hai - refresh token httpOnly cookie automatically bhejne ke liye
 });
 

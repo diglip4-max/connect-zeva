@@ -57,6 +57,20 @@ const ChatPage = () => {
       queryClient.invalidateQueries({ queryKey: ["chat-list"] });
     },
   );
+  useSocketEvent<{ conversationId: string; members: any[] }>(
+    "conversation:membersRemoved",
+    () => {
+      queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+    },
+  );
+
+  useSocketEvent("conversation:memberLeft", () => {
+    queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+  });
+
+  useSocketEvent("conversation:updated", () => {
+    queryClient.invalidateQueries({ queryKey: ["chat-list"] });
+  });
 
   const activeConversation = chatListResponse?.conversations.find(
     (c) => c._id === activeConversationId,

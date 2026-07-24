@@ -6,7 +6,9 @@ import {
   forwardMessage,
   getConversationMessages,
   getPinnedMessages,
+  getSharedFiles,
   getSharedLinks,
+  getSharedMedia,
   markMessagesAsRead,
   searchMessages,
   sendMessage,
@@ -279,6 +281,37 @@ export const search = async (
     }
     const results = await searchMessages(userId, clinicId, q);
     return successResponse(res, 200, "Search results", results);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// src/controllers/message.controller.ts (add these)
+export const getMedia = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+    const { id: userId } = req.user!;
+    const media = await getSharedMedia(conversationId, userId);
+    return successResponse(res, 200, "Media fetched", media);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getFiles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+    const { id: userId } = req.user!;
+    const files = await getSharedFiles(conversationId, userId);
+    return successResponse(res, 200, "Files fetched", files);
   } catch (err) {
     next(err);
   }

@@ -10,10 +10,14 @@ import {
 import { useTheme } from "@/context/ThemeContext";
 
 interface EmojiPickerButtonProps {
+  trigger?: React.ReactNode;
   onEmojiSelect: (emoji: string) => void;
 }
 
-const EmojiPickerButton = ({ onEmojiSelect }: EmojiPickerButtonProps) => {
+const EmojiPickerButton = ({
+  trigger,
+  onEmojiSelect,
+}: EmojiPickerButtonProps) => {
   const [open, setOpen] = useState(false);
   const { theme } = useTheme();
 
@@ -33,14 +37,18 @@ const EmojiPickerButton = ({ onEmojiSelect }: EmojiPickerButtonProps) => {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 shrink-0 rounded-full text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary"
-          title="Add emoji"
-        >
-          <Smile className="h-4 w-4" />
-        </Button>
+        {trigger ? (
+          trigger
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 rounded-full text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary"
+            title="Add emoji"
+          >
+            <Smile className="h-4 w-4" />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         side="top"

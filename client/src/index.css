@@ -87,3 +87,33 @@
     @apply font-sans;
   }
 }
+
+/* Global CSS mein add karein */
+/*
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Agar kuch specific elements mein copy allow karna hai toh */
+/* input,
+textarea,
+[contenteditable="true"] { */
+/* user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text; */
+/* } */
+
+/* client/src/index.css me @layer base ke bahar, kisi bhi jagah add karo */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--tw-rotate));
+  }
+  50% {
+    transform: translateY(-12px) rotate(var(--tw-rotate));
+  }
+}

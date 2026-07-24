@@ -99,6 +99,26 @@ export interface ServerToClientEvents {
       isOnline: boolean;
     }[];
   }) => void;
+  "conversation:membersRemoved": (data: {
+    conversationId: string;
+    members: {
+      _id: string;
+      name: string;
+      avatarUrl?: string;
+      role: string;
+      isOnline: boolean;
+    }[];
+  }) => void;
+  "conversation:memberLeft": (data: {
+    conversationId: string;
+    userId: string;
+    newAdmins: string[];
+  }) => void;
+  "conversation:updated": (data: {
+    conversationId: string;
+    groupName?: string;
+    groupAvatarUrl?: string;
+  }) => void;
   error: (data: { context: string; message: string }) => void;
 }
 

@@ -2,7 +2,9 @@
 import { Router } from "express";
 import {
   forwardMessageController,
+  getFiles,
   getLinks,
+  getMedia,
   getMessages,
   getPinned,
   markAsRead,
@@ -31,5 +33,8 @@ router.post("/:messageId/forward", requireAuth, forwardMessageController);
 
 router.post("/:messageId/pin", requireAuth, pinMessage);
 router.get("/:conversationId/pinned", requireAuth, getPinned);
+
+router.get("/:conversationId/media", requireAuth, getMedia);
+router.get("/:conversationId/files", requireAuth, getFiles);
 
 export default router;

@@ -3,12 +3,14 @@ import { Router } from "express";
 import {
   addMembers,
   createGroup,
+  leaveGroupController,
   listConversations,
   makeAdmin,
   muteConversation,
   removeAdmin,
   removeMember,
   searchAll,
+  updateGroupController,
 } from "../controllers/conversation.controller";
 import { requireAuth } from "../middlewares/auth.middleware";
 
@@ -24,5 +26,8 @@ router.post("/group/remove-member", requireAuth, removeMember);
 router.post("/mute", requireAuth, muteConversation);
 router.post("/group/add-members", requireAuth, addMembers);
 router.get("/search/global", requireAuth, searchAll);
+
+router.post("/:conversationId/leave", requireAuth, leaveGroupController);
+router.patch("/:conversationId/settings", requireAuth, updateGroupController);
 
 export default router;

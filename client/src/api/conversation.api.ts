@@ -65,3 +65,21 @@ export const removeGroupMember = async (
   );
   return data.data;
 };
+
+export const leaveGroup = async (conversationId: string) => {
+  const { data } = await axiosClient.post(
+    `/conversations/${conversationId}/leave`,
+  );
+  return data.data;
+};
+
+export const updateGroupSettings = async (
+  conversationId: string,
+  updates: { groupName?: string; groupAvatarUrl?: string },
+) => {
+  const { data } = await axiosClient.patch(
+    `/conversations/${conversationId}/settings`,
+    updates,
+  );
+  return data.data;
+};

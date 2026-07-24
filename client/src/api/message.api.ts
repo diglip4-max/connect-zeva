@@ -1,6 +1,11 @@
 // src/api/message.api.ts
 import axiosClient from "./axiosClient";
-import type { MessageDTO, SharedLinkEntry } from "@/types/message.types";
+import type {
+  MessageDTO,
+  SharedFileItem,
+  SharedLinkEntry,
+  SharedMediaItem,
+} from "@/types/message.types";
 
 export const fetchMessages = async (
   conversationId: string,
@@ -63,5 +68,19 @@ export const forwardMessage = async (
   const { data } = await axiosClient.post(`/messages/${messageId}/forward`, {
     targetConversationIds,
   });
+  return data.data;
+};
+
+export const fetchSharedMedia = async (
+  conversationId: string,
+): Promise<SharedMediaItem[]> => {
+  const { data } = await axiosClient.get(`/messages/${conversationId}/media`);
+  return data.data;
+};
+
+export const fetchSharedFiles = async (
+  conversationId: string,
+): Promise<SharedFileItem[]> => {
+  const { data } = await axiosClient.get(`/messages/${conversationId}/files`);
   return data.data;
 };

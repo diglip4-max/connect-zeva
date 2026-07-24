@@ -53,7 +53,7 @@ const MentionSuggestions = ({
 
   return (
     <Popover open={open && filtered.length > 0}>
-      <PopoverTrigger>
+      <PopoverTrigger className="w-full">
         <div className="relative">{children}</div>
       </PopoverTrigger>
       <PopoverContent

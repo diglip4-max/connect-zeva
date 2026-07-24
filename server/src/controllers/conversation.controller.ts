@@ -4,11 +4,13 @@ import {
   addGroupMembers,
   createGroupConversation,
   getUnifiedChatList,
+  leaveGroup,
   makeGroupAdmin,
   removeGroupAdmin,
   removeGroupMember,
   searchPeopleAndConversations,
   toggleMuteConversation,
+  updateGroupSettings,
 } from "../services/conversation.service";
 import { successResponse } from "../utils/apiResponse";
 import { getIO } from "@/sockets";
@@ -152,6 +154,25 @@ export const removeMember = async (
       requesterId,
       targetUserId,
     );
+
+    await conversation.populate("members", "name avatarUrl role isOnline");
+    const io = getIO();
+    if (io) {
+      io.to(`conversation:${conversation._id}`).emit(
+        "conversation:membersRemoved",
+        {
+          conversationId: conversation._id.toString(),
+          members: (conversation.members as any[]).map((m) => ({
+            _id: m._id.toString(),
+            name: m.name,
+            avatarUrl: m.avatarUrl || "",
+            role: m.role,
+            isOnline: m.isOnline,
+          })),
+        },
+      );
+    }
+
     return successResponse(res, 200, "Member removed", conversation);
   } catch (err) {
     next(err);
@@ -234,6 +255,74 @@ export const searchAll = async (
     }
     const results = await searchPeopleAndConversations(userId, clinicId, q);
     return successResponse(res, 200, "Search results", results);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// src/controllers/conversation.controller.ts
+export const leaveGroupController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+    const { id: userId } = req.user!;
+
+    const conversation = await leaveGroup(conversationId, userId);
+
+    const io = getIO();
+    if (io) {
+      // socket se turant nikaal do room se, aur baaki members ko batao
+      const sockets = await io.fetchSockets();
+      sockets.forEach((socket) => {
+        if ((socket.data as any).user?.id === userId) {
+          socket.leave(`conversation:${conversationId}`);
+        }
+      });
+      io.to(`conversation:${conversationId}`).emit("conversation:memberLeft", {
+        conversationId,
+        userId,
+        newAdmins:
+          conversation?.admins?.map((a: any) => a.toString() || "") || [],
+      });
+    }
+
+    return successResponse(res, 200, "Left group successfully");
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateGroupController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+    const { groupName, groupAvatarUrl } = req.body as {
+      groupName?: string;
+      groupAvatarUrl?: string;
+    };
+    const { id: userId } = req.user!;
+
+    const conversation = await updateGroupSettings(conversationId, userId, {
+      groupName,
+      groupAvatarUrl,
+    });
+
+    const io = getIO();
+    if (io) {
+      io.to(`conversation:${conversationId}`).emit("conversation:updated", {
+        conversationId,
+        groupName: conversation.groupName,
+        groupAvatarUrl: conversation.groupAvatarUrl,
+      });
+    }
+
+    return successResponse(res, 200, "Group updated", conversation);
   } catch (err) {
     next(err);
   }

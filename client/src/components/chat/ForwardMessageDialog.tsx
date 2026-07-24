@@ -18,6 +18,7 @@ import { fetchChatList } from "@/api/conversation.api";
 import { forwardMessage } from "@/api/message.api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 interface ForwardMessageDialogProps {
   messageId: string | null;
@@ -30,6 +31,7 @@ const ForwardMessageDialog = ({
   open,
   onOpenChange,
 }: ForwardMessageDialogProps) => {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isForwarding, setIsForwarding] = useState(false);
@@ -71,7 +73,7 @@ const ForwardMessageDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm z-[200]">
         <DialogHeader>
           <DialogTitle>Forward message</DialogTitle>
         </DialogHeader>
@@ -89,12 +91,16 @@ const ForwardMessageDialog = ({
         <ScrollArea className="h-72 -mx-1">
           <div className="space-y-0.5 px-1">
             {conversations?.map((c) => {
+              let otherMember = null;
+              if (c.type === "direct") {
+                otherMember = c.members.find((m) => m._id !== user?.id);
+              }
               const name =
                 c.type === "group"
                   ? c.groupName || "Group"
-                  : c.members[0]?.name || "Direct chat";
+                  : otherMember?.name || "Direct chat";
               const avatarUrl =
-                c.type === "group" ? c.groupAvatarUrl : c.members[0]?.avatarUrl;
+                c.type === "group" ? c.groupAvatarUrl : otherMember?.avatarUrl;
               const isSelected = selectedIds.includes(c._id);
               return (
                 <button

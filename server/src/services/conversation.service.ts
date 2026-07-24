@@ -1,4 +1,5 @@
 // src/services/conversation.service.ts
+import { Message } from "@/models/Message.model";
 import { Conversation } from "../models/Conversation.model";
 import { User } from "../models/User.model";
 import { AppError } from "../utils/AppError";
@@ -7,11 +8,66 @@ import { AppError } from "../utils/AppError";
  * Unified list: existing conversations (only with active members)
  * + active clinic staff jinke saath abhi conversation nahi hai
  */
+// export async function getUnifiedChatList(
+//   currentUserId: string,
+//   clinicId: string,
+// ) {
+//   // Step 1: existing conversations, sirf unke saath jo abhi bhi active hain
+//   const conversations = await Conversation.find({
+//     clinicId,
+//     members: currentUserId,
+//   })
+//     .populate({
+//       path: "members",
+//       select: "name avatarUrl isOnline role isActive",
+//       match: { isActive: true }, // deactivated members ko populate hi mat karo
+//     })
+//     .populate("lastMessage")
+//     .sort({ lastMessageAt: -1, createdAt: -1 });
+
+//   // direct conversations jinka doosra member ab deactivated ho chuka hai, unhe filter kar do
+//   const validConversations = conversations.filter((c) => {
+//     if (c.type === "group") return true; // groups me kayi members hote hain, alag handle karenge
+//     // direct chat: doosra member ab bhi active hona chahiye
+//     const otherMember = c.members.find(
+//       (m: any) => m._id.toString() !== currentUserId,
+//     );
+//     return !!otherMember;
+//   });
+
+//   const conversationPartnerIds = new Set(
+//     validConversations
+//       .filter((c) => c.type === "direct")
+//       .map((c) => {
+//         const other = c.members.find(
+//           (m: any) => m._id.toString() !== currentUserId,
+//         );
+//         return other?._id.toString();
+//       }),
+//   );
+
+//   // Step 2: active clinic staff jinke saath abhi conversation nahi hai
+//   const allActiveStaff = await User.find({
+//     clinicId,
+//     isActive: true,
+//     _id: { $ne: currentUserId },
+//   }).select("_id name avatarUrl role isOnline");
+
+//   const staffWithoutConversation = allActiveStaff.filter(
+//     (staff) => !conversationPartnerIds.has(staff._id.toString()),
+//   );
+
+//   return {
+//     conversations: validConversations,
+//     staffWithoutConversation, // frontend inhe "start chatting" entries ki tarah dikhayega
+//   };
+// }
+
+// src/services/conversation.service.ts (update existing function)
 export async function getUnifiedChatList(
   currentUserId: string,
   clinicId: string,
 ) {
-  // Step 1: existing conversations, sirf unke saath jo abhi bhi active hain
   const conversations = await Conversation.find({
     clinicId,
     members: currentUserId,
@@ -19,23 +75,38 @@ export async function getUnifiedChatList(
     .populate({
       path: "members",
       select: "name avatarUrl isOnline role isActive",
-      match: { isActive: true }, // deactivated members ko populate hi mat karo
+      match: { isActive: true },
     })
     .populate("lastMessage")
-    .sort({ lastMessageAt: -1, createdAt: -1 });
+    .sort({ lastMessageAt: -1 });
 
-  // direct conversations jinka doosra member ab deactivated ho chuka hai, unhe filter kar do
   const validConversations = conversations.filter((c) => {
-    if (c.type === "group") return true; // groups me kayi members hote hain, alag handle karenge
-    // direct chat: doosra member ab bhi active hona chahiye
+    if (c.type === "group") return true;
     const otherMember = c.members.find(
       (m: any) => m._id.toString() !== currentUserId,
     );
     return !!otherMember;
   });
 
+  // naya - har conversation ke liye unread count parallel me fetch karo
+  const conversationsWithUnread = await Promise.all(
+    validConversations.map(async (c) => {
+      const unreadCount = await Message.countDocuments({
+        conversationId: c._id,
+        senderId: { $ne: currentUserId }, // apne khud ke messages count nahi karne
+        readBy: { $ne: currentUserId }, // jo abhi tak read nahi kiye
+        isDeleted: { $ne: true },
+      });
+
+      return {
+        ...c.toObject(),
+        unreadCount,
+      };
+    }),
+  );
+
   const conversationPartnerIds = new Set(
-    validConversations
+    conversationsWithUnread
       .filter((c) => c.type === "direct")
       .map((c) => {
         const other = c.members.find(
@@ -45,7 +116,6 @@ export async function getUnifiedChatList(
       }),
   );
 
-  // Step 2: active clinic staff jinke saath abhi conversation nahi hai
   const allActiveStaff = await User.find({
     clinicId,
     isActive: true,
@@ -57,8 +127,8 @@ export async function getUnifiedChatList(
   );
 
   return {
-    conversations: validConversations,
-    staffWithoutConversation, // frontend inhe "start chatting" entries ki tarah dikhayega
+    conversations: conversationsWithUnread,
+    staffWithoutConversation,
   };
 }
 
@@ -278,4 +348,60 @@ export async function searchPeopleAndConversations(
     .lean();
 
   return { people: staff, conversations };
+}
+
+export async function leaveGroup(conversationId: string, userId: string) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation || conversation.type !== "group") {
+    throw new AppError("Group not found", 404);
+  }
+  if (!conversation.members.some((m) => m.toString() === userId)) {
+    throw new AppError("You are not a member of this group", 403);
+  }
+
+  const isLastAdmin =
+    conversation?.admins?.length === 1 &&
+    conversation?.admins?.[0].toString() === userId;
+
+  conversation.members = conversation.members.filter(
+    (m) => m.toString() !== userId,
+  );
+  conversation.admins = conversation?.admins?.filter(
+    (a) => a.toString() !== userId,
+  );
+
+  // agar last admin chala gaya aur baaki members bache hain, sabse pehla member ko promote karo
+  if (isLastAdmin && conversation.members.length > 0) {
+    conversation.admins?.push(conversation.members[0]);
+  }
+
+  await conversation.save();
+  return conversation;
+}
+
+export async function updateGroupSettings(
+  conversationId: string,
+  userId: string,
+  updates: { groupName?: string; groupAvatarUrl?: string },
+) {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation || conversation.type !== "group") {
+    throw new AppError("Group not found", 404);
+  }
+  if (!conversation?.admins?.some((a) => a.toString() === userId)) {
+    throw new AppError("Only admins can update group settings", 403);
+  }
+
+  if (updates.groupName !== undefined) {
+    if (!updates.groupName.trim()) {
+      throw new AppError("Group name cannot be empty", 400);
+    }
+    conversation.groupName = updates.groupName.trim();
+  }
+  if (updates.groupAvatarUrl !== undefined) {
+    conversation.groupAvatarUrl = updates.groupAvatarUrl;
+  }
+
+  await conversation.save();
+  return conversation;
 }

@@ -34,6 +34,8 @@ const PinnedMessagesBar = ({ conversationId }: PinnedMessagesBarProps) => {
     (state) => state.selectedConversation,
   );
 
+  const setScrollToMessageId = useChatStore((s) => s.setScrollToMessageId);
+
   const isGroupType = selectedConversation?.type === "group";
   const isCurrentUserAdmin =
     selectedConversation?.admins?.includes(user?.id || "") ?? false;
@@ -78,7 +80,10 @@ const PinnedMessagesBar = ({ conversationId }: PinnedMessagesBarProps) => {
     <div className="flex items-center gap-2 border-b border-border/60 bg-primary/5 px-4 py-2">
       <Pin className="h-3.5 w-3.5 shrink-0 text-primary" />
 
-      <div className="min-w-0 flex-1">
+      <div
+        onClick={() => setScrollToMessageId(latestPinned._id)}
+        className="min-w-0 flex-1 cursor-pointer"
+      >
         <p className="truncate text-xs text-foreground">
           <span className="font-medium">{latestPinned.senderId?.name}: </span>
           {latestPinned.text || "Attachment"}
@@ -102,7 +107,11 @@ const PinnedMessagesBar = ({ conversationId }: PinnedMessagesBarProps) => {
                 {pinnedMessages.map((msg) => (
                   <div
                     key={msg._id}
-                    className="group flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+                    className="group flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-muted/60"
+                    onClick={() => {
+                      setScrollToMessageId(msg._id);
+                      setIsPopoverOpen(false);
+                    }}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium">

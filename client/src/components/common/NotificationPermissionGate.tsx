@@ -3,8 +3,8 @@ import { Bell, BellOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
-const DISMISS_BLOCKED_KEY = "zeva_messenger_notif_blocked_dismissed";
-const ALREADY_SUBSCRIBED_KEY = "zeva_messenger_push_subscribed";
+const DISMISS_BLOCKED_KEY = "zeva_connect_notif_blocked_dismissed";
+const ALREADY_SUBSCRIBED_KEY = "zeva_connect_push_subscribed";
 
 const NotificationPermissionGate = () => {
   const { requestPermissionAndSubscribe } = usePushNotifications();

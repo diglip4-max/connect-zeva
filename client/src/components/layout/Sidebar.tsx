@@ -5,6 +5,7 @@ import {
   MessageSquare,
   ChevronsLeft,
   ChevronsRight,
+  Settings,
 } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/chat", label: "Chat", icon: MessageSquare },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 const Sidebar = () => {
