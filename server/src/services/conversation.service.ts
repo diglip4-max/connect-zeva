@@ -1,5 +1,5 @@
 // src/services/conversation.service.ts
-import { Message } from "@/models/Message.model";
+import { Message } from "../models/Message.model";
 import { Conversation } from "../models/Conversation.model";
 import { User } from "../models/User.model";
 import { AppError } from "../utils/AppError";

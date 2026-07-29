@@ -16,7 +16,7 @@ import {
   toggleReaction,
 } from "../services/message.service";
 import { successResponse } from "../utils/apiResponse";
-import { getIO } from "@/sockets";
+import { getIO } from "../sockets";
 
 export const getMessages = async (
   req: Request,

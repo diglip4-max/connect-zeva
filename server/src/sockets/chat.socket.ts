@@ -13,7 +13,13 @@ import {
   ReadReceiptPayload,
   TypingPayload,
 } from "../types/socket.types";
-import { sendMessage } from "@/services/message.service";
+import { sendMessage } from "../services/message.service";
+import { RateLimiterMemory } from "rate-limiter-flexible";
+
+const messageRateLimiter = new RateLimiterMemory({
+  points: 20, // 20 messages
+  duration: 10, // per 10 seconds
+});
 
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 type TypedSocket = Socket<
@@ -31,6 +37,9 @@ export function registerChatHandlers(io: TypedServer, socket: TypedSocket) {
   // lekin frontend ko REST use karna chahiye reliability ke liye.
   socket.on("message:send", async (payload: SendMessagePayload) => {
     try {
+      // - rate limit check
+      await messageRateLimiter.consume(currentUser.id);
+
       const { conversation, isNewConversation } = await sendMessage({
         senderId: currentUser.id,
         clinicId: currentUser.clinicId,
@@ -45,7 +54,16 @@ export function registerChatHandlers(io: TypedServer, socket: TypedSocket) {
         socket.join(`conversation:${conversation._id}`);
       }
       // broadcast already sendMessage() ke andar ho chuka hai
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.remainingPoints !== undefined) {
+        // yeh rate-limiter ka rejection hai
+        socket.emit("error", {
+          context: "message:send",
+          message: "You're sending messages too fast. Please slow down.",
+        });
+        return;
+      }
+
       logger.warn({ err, userId: currentUser.id }, "message:send failed");
       const errMessage =
         err instanceof AppError ? err.message : "Failed to send message";

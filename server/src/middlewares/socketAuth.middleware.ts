@@ -1,10 +1,11 @@
 // src/sockets/socketAuth.middleware.ts
 import { Socket } from "socket.io";
-import { ExtendedError } from "socket.io/dist/namespace";
 import { verifyAccessToken } from "../services/token.service";
 import { getUserById } from "../services/auth.service";
 import { SocketData } from "../types/socket.types";
 import logger from "../utils/logger";
+
+type ExtendedError = Error & { data?: any };
 
 export const socketAuthMiddleware = async (
   socket: Socket,

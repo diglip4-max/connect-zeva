@@ -708,7 +708,7 @@ const MessageBubble = ({
 
               {attachments.map((att, i) => {
                 const senderInfo = {
-                  name: isOwn ? "You" : senderName,
+                  name: isOwn ? "You" : (senderName ?? "Unknown"),
                   avatarUrl: senderAvatarUrl,
                   date: createdAt,
                 };

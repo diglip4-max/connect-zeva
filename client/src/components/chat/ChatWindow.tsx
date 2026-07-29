@@ -170,12 +170,10 @@ const ChatWindow = ({
   });
 
   useEffect(() => {
-    if (!conversationId || !socket || messages.length === 0) return;
+    if (!conversationId || !socket || !user || messages.length === 0) return;
 
     const unreadIds = messages
-      .filter(
-        (m) => m.senderId._id !== user?.id && !m.readBy?.includes(user?.id),
-      )
+      .filter((m) => m.senderId._id !== user.id && !m.readBy?.includes(user.id))
       .map((m) => m._id);
 
     unreadIds.forEach((messageId) => {

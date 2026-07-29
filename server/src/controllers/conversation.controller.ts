@@ -13,7 +13,7 @@ import {
   updateGroupSettings,
 } from "../services/conversation.service";
 import { successResponse } from "../utils/apiResponse";
-import { getIO } from "@/sockets";
+import { getIO } from "../sockets";
 
 export const listConversations = async (
   req: Request,

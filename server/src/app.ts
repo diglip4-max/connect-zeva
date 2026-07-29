@@ -19,12 +19,20 @@ app.use("/api/v1", router);
 
 // Production me client ka static build serve karo
 if (ENV.NODE_ENV === "production") {
-  const clientDistPath = path.join(__dirname, "../../client-dist");
+  const clientDistPath = path.join(__dirname, "../client-dist");
   app.use(express.static(clientDistPath));
 
   // koi bhi non-API route -> React app ka index.html (client-side routing ke liye)
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(clientDistPath, "index.html"));
+  // Express 5 ke stricter path parser ke liye middleware approach use karte hain
+  app.use((req, res, next) => {
+    if (
+      req.method === "GET" &&
+      !req.path.startsWith("/api/") &&
+      !req.path.startsWith("/socket.io/")
+    ) {
+      return res.sendFile(path.join(clientDistPath, "index.html"));
+    }
+    next();
   });
 }
 

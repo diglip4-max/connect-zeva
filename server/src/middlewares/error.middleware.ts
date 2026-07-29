@@ -1,7 +1,7 @@
 // src/middlewares/error.middleware.ts
 import { Request, Response, NextFunction } from "express";
-import logger from "@/utils/logger";
-import { AppError } from "@/utils/AppError";
+import logger from "../utils/logger";
+import { AppError } from "../utils/AppError";
 
 export const errorHandler = (
   err: Error | AppError,

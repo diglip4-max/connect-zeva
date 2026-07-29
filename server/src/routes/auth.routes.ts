@@ -5,12 +5,12 @@ import {
   logout,
   getMe,
   login,
-} from "@/controllers/auth.controller";
-import { requireAuth } from "@/middlewares/auth.middleware";
+} from "../controllers/auth.controller";
+import { requireAuth } from "../middlewares/auth.middleware";
 import {
   authLimiter,
   refreshLimiter,
-} from "@/middlewares/rateLimiter.middleware";
+} from "../middlewares/rateLimiter.middleware";
 
 const router = Router();
 

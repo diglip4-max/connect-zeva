@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mongo:
     image: mongo:7
@@ -15,13 +13,13 @@ services:
     container_name: zeva-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   app:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: zeva-messenger-app
+    container_name: zeva-connect-app
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -29,7 +27,7 @@ services:
       - ../server/.env
     environment:
       - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/zeva-messenger
+      - MONGO_URI=mongodb://mongo:27017/zeva-connect
       - REDIS_URL=redis://redis:6379
     depends_on:
       - mongo

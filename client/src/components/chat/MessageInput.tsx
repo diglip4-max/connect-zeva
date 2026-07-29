@@ -466,7 +466,9 @@ const MessageInput = ({ conversationId, recipientId }: MessageInputProps) => {
       }
 
       await sendMessage({
-        ...(conversationId ? { conversationId } : { recipientId }),
+        ...(conversationId
+          ? { conversationId }
+          : { recipientId: recipientId ?? undefined }),
         text: messageText || undefined,
         attachments,
         replyTo: replyingTo?.messageId,

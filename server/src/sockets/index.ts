@@ -6,11 +6,11 @@ import {
   ServerToClientEvents,
   ClientToServerEvents,
   SocketData,
-} from "@/types/socket.types";
-import logger from "@/utils/logger";
+} from "../types/socket.types";
+import logger from "../utils/logger";
 import { registerChatHandlers } from "./chat.socket";
 import { registerPresenceHandlers } from "./presence.socket";
-import { socketAuthMiddleware } from "@/middlewares/socketAuth.middleware";
+import { socketAuthMiddleware } from "../middlewares/socketAuth.middleware";
 
 let ioInstance: Server<ClientToServerEvents, ServerToClientEvents>;
 

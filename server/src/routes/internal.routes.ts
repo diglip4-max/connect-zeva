@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { deactivateUserLocally } from "@/controllers/internal.controller";
-import { verifyInternalApiKey } from "@/middlewares/internal.middleware";
+import { deactivateUserLocally } from "../controllers/internal.controller";
+import { verifyInternalApiKey } from "../middlewares/internal.middleware";
 
 const router = Router();
 

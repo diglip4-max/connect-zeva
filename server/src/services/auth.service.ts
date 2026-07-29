@@ -97,7 +97,7 @@ export async function loginWithCredentials(email: string, password: string) {
   }
   console.log({ zevaPayload });
   const user = await upsertLocalUser(zevaPayload);
-  console.log({ user });
+  //   console.log({ user });
 
   if (!user.isActive) {
     throw new AppError(

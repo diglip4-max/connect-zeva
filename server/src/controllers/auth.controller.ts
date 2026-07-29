@@ -4,14 +4,14 @@ import {
   loginWithSSOTicket,
   getUserById,
   loginWithCredentials,
-} from "@/services/auth.service";
-import { ENV } from "@/config/env";
-import { successResponse } from "@/utils/apiResponse";
+} from "../services/auth.service";
+import { ENV } from "../config/env";
+import { successResponse } from "../utils/apiResponse";
 import {
   verifyAndRotateRefreshToken,
   generateAccessToken,
   revokeRefreshToken,
-} from "@/services/token.service";
+} from "../services/token.service";
 
 const REFRESH_COOKIE_NAME = "zeva_connect_refresh";
 

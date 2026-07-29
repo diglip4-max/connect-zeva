@@ -3,11 +3,11 @@ import { Message } from "../models/Message.model";
 import { Conversation } from "../models/Conversation.model";
 import { AppError } from "../utils/AppError";
 import { findOrCreateDirectConversation } from "./conversation.service";
-import { getIO } from "@/sockets";
-import { IUser } from "@/models/User.model";
+import { getIO } from "../sockets";
+import { IUser } from "../models/User.model";
 import { sendPushToUsers } from "./push.service";
-import logger from "@/utils/logger";
-import { extractUrls } from "@/utils/linkify";
+import logger from "../utils/logger";
+import { extractUrls } from "../utils/linkify";
 
 const DEFAULT_PAGE_SIZE = 30;
 
