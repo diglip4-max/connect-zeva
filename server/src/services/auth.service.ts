@@ -84,6 +84,7 @@ async function verifyCredentialsWithZeva(
 
 export async function loginWithCredentials(email: string, password: string) {
   const zevaPayload = await verifyCredentialsWithZeva(email, password);
+  console.log({ zevaPayload });
   if (!zevaPayload) {
     throw new AppError("Invalid email or password", 401);
   }

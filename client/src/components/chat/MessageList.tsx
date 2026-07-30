@@ -196,9 +196,13 @@ const MessageList = ({
             // const nextMsg =
             //   index < messages.length - 1 ? messages[index + 1] : undefined;
             const showAvatar = isGroup && !isOwn;
-            //   &&
-            //   (!nextMsg || nextMsg.senderId._id !== msg.senderId._id);
-            const senderInfo = isGroup ? msg.senderId : undefined;
+            // &&
+            // (!nextMsg || nextMsg.senderId._id !== msg.senderId._id);
+            console.log({
+              isGroup,
+              msgS: msg.senderId,
+            });
+            const senderInfo = isGroup ? msg.senderId : msg.senderId;
             const replyPreview = getReplyPreview(msg.replyTo);
 
             const isHighlighted = highlightedId === msg._id;
