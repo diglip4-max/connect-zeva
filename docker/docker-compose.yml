@@ -50,8 +50,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx_logs:/var/log/nginx
-      - /etc/letsencrypt/archive/connect.zeva360.com/fullchain1.pem:/etc/nginx/ssl/fullchain.pem:ro
-      - /etc/letsencrypt/archive/connect.zeva360.com/privkey1.pem:/etc/nginx/ssl/privkey.pem:ro
+      - ./ssl:/etc/nginx/ssl:ro
 
     depends_on:
       - app
