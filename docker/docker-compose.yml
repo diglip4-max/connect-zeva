@@ -49,7 +49,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx_logs:/var/log/nginx
-      - ssl-certs:/etc/nginx/ssl:ro
+      - /etc/letsencrypt/live/connect.zeva360.com:/etc/nginx/ssl:ro
     depends_on:
       - app
     networks:
@@ -58,7 +58,6 @@ services:
 volumes:
   mongo_data:
   nginx_logs:
-  ssl-certs:
 
 networks:
   zeva-network:
