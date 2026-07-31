@@ -33,7 +33,7 @@ const Sidebar = () => {
       {/* Nav items */}
       <nav className="flex flex-1 flex-col gap-1 px-2.5 pt-3">
         {navItems.map((item) => {
-          const navLinkContent = (
+          const linkButton = (
             <NavLink
               to={item.to}
               end={item.to === "/"}
@@ -72,21 +72,25 @@ const Sidebar = () => {
             </NavLink>
           );
 
-          // mobile pe tooltip ki zaroorat nahi (label already visible hai drawer me)
+          // TooltipTrigger pe display:contents mat lagao — Base UI ko asli DOM wrapper
+          // chahiye jiska getBoundingClientRect() measure kar sake (nahi to tooltip
+          // top-left chala jata hai). TooltipContent ko hamesha mounted rakho,
+          // collapse-state ke liye sirf CSS se visibility toggle karo.
           return (
             <Tooltip key={item.to}>
-              <TooltipTrigger className="md:contents">
-                {navLinkContent}
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent
-                  side="right"
-                  sideOffset={12}
-                  className="hidden md:block"
-                >
-                  {item.label}
-                </TooltipContent>
-              )}
+              <TooltipTrigger className="w-full">{linkButton}</TooltipTrigger>
+              <TooltipContent
+                side="right"
+                sideOffset={12}
+                className={cn(
+                  "pointer-events-none",
+                  isCollapsed
+                    ? "md:visible md:pointer-events-auto"
+                    : "md:hidden",
+                )}
+              >
+                {item.label}
+              </TooltipContent>
             </Tooltip>
           );
         })}
@@ -116,11 +120,16 @@ const Sidebar = () => {
               )}
             </Button>
           </TooltipTrigger>
-          {isCollapsed && (
-            <TooltipContent side="right" sideOffset={12}>
-              Expand sidebar
-            </TooltipContent>
-          )}
+          <TooltipContent
+            side="right"
+            sideOffset={12}
+            className={cn(
+              "pointer-events-none",
+              isCollapsed ? "visible pointer-events-auto" : "hidden",
+            )}
+          >
+            Expand sidebar
+          </TooltipContent>
         </Tooltip>
       </div>
     </>
