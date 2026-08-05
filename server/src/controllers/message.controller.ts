@@ -19,7 +19,7 @@ import {
 } from "../services/message.service";
 import { successResponse } from "../utils/apiResponse";
 import { getIO } from "../sockets";
-import { getConversationById } from "src/services/conversation.service";
+import { getConversationById } from "../services/conversation.service";
 
 export const getMessages = async (
   req: Request,

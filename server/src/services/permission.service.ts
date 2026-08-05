@@ -1,6 +1,6 @@
 import axios from "axios";
-import { ENV } from "src/config/env";
-import logger from "src/utils/logger";
+import { ENV } from "../config/env";
+import logger from "../utils/logger";
 
 export const getPermissionsFromZeva = async ({
   module,

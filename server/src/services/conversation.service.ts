@@ -63,7 +63,6 @@ import { AppError } from "../utils/AppError";
 //   };
 // }
 
-// src/services/conversation.service.ts (update existing function)
 export async function getUnifiedChatList(
   currentUserId: string,
   clinicId: string,

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { getPermissionsFromZeva } from "../services/permission.service";
 import { successResponse } from "../utils/apiResponse";
-import { getUserById } from "src/services/auth.service";
+import { getUserById } from "../services/auth.service";
 
 export const getPermissions = async (
   req: Request,
