@@ -15,7 +15,7 @@ const useConversation = ({ conversationId }: { conversationId: string }) => {
   });
 
   React.useEffect(() => {
-    selectConversation(conversation);
+    if (conversation) selectConversation(conversation);
   }, [conversation]);
 
   return {

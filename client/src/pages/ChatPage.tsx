@@ -29,7 +29,7 @@ const ChatPage = () => {
   const [isGroupDialogOpen, setIsGroupDialogOpen] = React.useState(false);
 
   const activeConversationId =
-    useChatStore((s) => s.activeConversationId) || chatId;
+    useChatStore((s) => s.activeConversationId) || chatId || "";
   const pendingRecipientId = useChatStore((s) => s.pendingRecipientId);
   const selectConversation = useChatStore((s) => s.selectConversation);
   const selectStaffRecipient = useChatStore((s) => s.selectStaffRecipient);
