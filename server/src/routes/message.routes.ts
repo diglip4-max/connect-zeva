@@ -12,6 +12,8 @@ import {
   postMessage,
   reactToMessage,
   removeMessage,
+  removeMessageForEveryone,
+  removeMessageForMe,
   search,
   updateMessage,
 } from "../controllers/message.controller";
@@ -28,6 +30,12 @@ router.get("/:conversationId", requireAuth, getMessages);
 
 router.post("/:messageId/react", requireAuth, reactToMessage);
 router.patch("/:messageId", requireAuth, updateMessage);
+router.delete("/:messageId/for-me", requireAuth, removeMessageForMe);
+router.delete(
+  "/:messageId/for-everyone",
+  requireAuth,
+  removeMessageForEveryone,
+);
 router.delete("/:messageId", requireAuth, removeMessage);
 router.post("/:messageId/forward", requireAuth, forwardMessageController);
 

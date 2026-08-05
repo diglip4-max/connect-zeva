@@ -6,7 +6,7 @@ export interface IUser extends Document {
   clinicId: string; // for clinic-scoping
   name: string;
   avatarUrl?: string;
-  role: "doctor" | "receptionist" | "staff" | "admin";
+  role: string;
   isActive: boolean;
   isOnline: boolean;
   lastSeenAt: Date;
@@ -22,8 +22,7 @@ const userSchema = new Schema<IUser>(
     avatarUrl: { type: String },
     role: {
       type: String,
-      enum: ["doctor", "receptionist", "staff", "admin"],
-      default: "staff",
+      default: "user",
     },
     isActive: { type: Boolean, default: true },
     isOnline: { type: Boolean, default: false },

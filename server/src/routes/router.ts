@@ -6,6 +6,7 @@ import conversationRoutes from "./conversation.routes";
 import messageRoutes from "./message.routes";
 import pushRoutes from "./push.routes";
 import uploadRoutes from "./upload.routes";
+import permissionRoutes from "./permission.routes";
 
 // router setup
 const router: Router = express.Router();
@@ -32,5 +33,8 @@ router.use("/push", pushRoutes);
 
 // upload routes
 router.use("/upload", uploadRoutes);
+
+// permission routes
+router.use("/permissions", permissionRoutes);
 
 export default router;

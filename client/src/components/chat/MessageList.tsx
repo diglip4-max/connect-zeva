@@ -198,10 +198,7 @@ const MessageList = ({
             const showAvatar = isGroup && !isOwn;
             // &&
             // (!nextMsg || nextMsg.senderId._id !== msg.senderId._id);
-            console.log({
-              isGroup,
-              msgS: msg.senderId,
-            });
+
             const senderInfo = isGroup ? msg.senderId : msg.senderId;
             const replyPreview = getReplyPreview(msg.replyTo);
 
@@ -219,6 +216,7 @@ const MessageList = ({
                 )}
               >
                 <MessageBubble
+                  message={msg}
                   messageId={msg._id}
                   text={msg.text}
                   attachments={msg.attachments}

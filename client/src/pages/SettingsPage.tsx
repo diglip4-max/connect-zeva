@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getInitials } from "@/lib/formatDate";
 import DeviceList from "@/components/settings/DeviceList";
 import ThemeSelector from "@/components/settings/ThemeSelector";
+import { PageTitle } from "@/components/common/PageTitle";
 
 const SettingsPage = () => {
   const { user, logout } = useAuth();
@@ -20,6 +21,9 @@ const SettingsPage = () => {
 
   return (
     <div className="h-full overflow-y-auto px-4 py-6 sm:px-10 sm:py-8">
+      {/* Page Title */}
+      <PageTitle title="Settings" />
+
       {/* Mobile back button */}
       <button
         onClick={() => navigate(-1)}

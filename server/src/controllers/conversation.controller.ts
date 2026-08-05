@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import {
   addGroupMembers,
   createGroupConversation,
+  getConversationById,
   getUnifiedChatList,
   leaveGroup,
   makeGroupAdmin,
@@ -323,6 +324,20 @@ export const updateGroupController = async (
     }
 
     return successResponse(res, 200, "Group updated", conversation);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getConversation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { conversationId } = req.params as { conversationId: string };
+    const conversation = await getConversationById(conversationId);
+    return successResponse(res, 200, "Conversation fetched", conversation);
   } catch (err) {
     next(err);
   }

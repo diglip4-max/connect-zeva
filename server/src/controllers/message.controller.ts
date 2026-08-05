@@ -2,6 +2,8 @@
 import { Request, Response, NextFunction } from "express";
 import {
   deleteMessage,
+  deleteMessageForEveryone,
+  deleteMessageForMe,
   editMessage,
   forwardMessage,
   getConversationMessages,
@@ -17,6 +19,7 @@ import {
 } from "../services/message.service";
 import { successResponse } from "../utils/apiResponse";
 import { getIO } from "../sockets";
+import { getConversationById } from "src/services/conversation.service";
 
 export const getMessages = async (
   req: Request,
@@ -68,7 +71,7 @@ export const postMessage = async (
       req.body;
     const { id: senderId, clinicId } = req.user!;
 
-    const { message, conversation, isNewConversation } = await sendMessage({
+    let { message, conversation, isNewConversation } = await sendMessage({
       senderId,
       clinicId,
       conversationId,
@@ -86,6 +89,39 @@ export const postMessage = async (
         if (s.data.user?.id === senderId) {
           s.join(`conversation:${conversation._id}`);
         }
+      });
+
+      //  recipientId flow me bhi join karo
+      if (recipientId) {
+        const recipientSockets = io?.sockets.sockets;
+        recipientSockets?.forEach((s) => {
+          if (s.data.user?.id === recipientId) {
+            s.join(`conversation:${conversation._id}`);
+          }
+        });
+      }
+
+      // fetch conversation
+      conversation = await getConversationById(conversation._id.toString());
+      // saare members ko populate karke bhejo (frontend ko poori info chahiye)
+      await conversation.populate("members", "name avatarUrl role isOnline");
+
+      // ab room ban chuka hai (sab active members join ho chuke), broadcast karo
+      io.to(`conversation:${conversation._id}`).emit("conversation:new", {
+        _id: conversation._id.toString(),
+        type: conversation.type,
+        members: (conversation.members as any[]).map((m) => ({
+          _id: m._id.toString(),
+          name: m.name,
+          avatarUrl: m.avatarUrl || "",
+          role: m.role,
+          isOnline: m.isOnline,
+        })),
+        groupName: conversation.groupName,
+        groupAvatarUrl: conversation.groupAvatarUrl,
+        lastMessage: { text: "" },
+        lastMessageAt: conversation.lastMessageAt?.toISOString(),
+        admins: conversation.admins?.map((a: any) => a.toString()),
       });
     }
 
@@ -180,6 +216,54 @@ export const removeMessage = async (
     const { id: userId } = req.user!;
 
     const message = await deleteMessage(messageId, userId, !!forEveryone);
+
+    const io = getIO();
+    if (io) {
+      io.to(`conversation:${message.conversationId}`).emit("message:deleted", {
+        messageId: message._id.toString(),
+        deletedForEveryone: message.deletedForEveryone,
+      });
+    }
+
+    return successResponse(res, 200, "Message deleted", message);
+  } catch (err) {
+    next(err);
+  }
+};
+export const removeMessageForMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { messageId } = req.params as { messageId: string };
+    const { id: userId } = req.user!;
+
+    const message = await deleteMessageForMe(messageId, userId);
+
+    const io = getIO();
+    if (io) {
+      io.to(`conversation:${message.conversationId}`).emit("message:deleted", {
+        messageId: message._id.toString(),
+        deletedForEveryone: message.deletedForEveryone,
+      });
+    }
+
+    return successResponse(res, 200, "Message deleted", message);
+  } catch (err) {
+    next(err);
+  }
+};
+export const removeMessageForEveryone = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { messageId } = req.params as { messageId: string };
+    const { id: userId } = req.user!;
+
+    const message = await deleteMessageForEveryone(messageId, userId);
 
     const io = getIO();
     if (io) {

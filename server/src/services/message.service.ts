@@ -25,7 +25,18 @@ export async function getConversationMessages(
     throw new AppError("Not a member of this conversation", 403);
   }
 
-  const query: any = { conversationId, isDeleted: { $ne: true } };
+  const query: any = {
+    conversationId,
+    $and: [
+      { deletedForEveryone: { $ne: true } },
+      {
+        $or: [
+          { deletedForMe: { $not: { $in: [userId] } } },
+          { deletedForMe: { $exists: false } },
+        ],
+      },
+    ],
+  };
   if (cursor) {
     query._id = { $lt: cursor }; // cursor se purane messages (older-than-cursor)
   }
@@ -300,6 +311,70 @@ export async function deleteMessage(
     message.text = undefined;
     message.attachments = [];
   }
+
+  await message.save();
+  return message;
+}
+export async function deleteMessageForMe(messageId: string, userId: string) {
+  const message = await Message.findById(messageId);
+  if (!message) throw new AppError("Message not found", 404);
+
+  // Cannot delete if already deleted for everyone
+  if (message.deletedForEveryone) {
+    throw new AppError("Message already deleted for everyone", 400);
+  }
+
+  // Add user to deletedForMe list if not already there
+  if (!message.deletedForMe?.includes(userId as any)) {
+    message.deletedForMe = [...(message.deletedForMe || []), userId as any];
+    message.deletedAt = new Date();
+    message.deletedBy = [...(message.deletedBy || []), userId as any];
+
+    // If all participants have deleted it for themselves, we can soft delete it
+    // But for simplicity, we'll just track who deleted it
+
+    await message.save();
+  }
+
+  await message.save();
+  return message;
+}
+export async function deleteMessageForEveryone(
+  messageId: string,
+  userId: string,
+) {
+  const message = await Message.findById(messageId);
+  if (!message) throw new AppError("Message not found", 404);
+
+  // Check if user is sender
+  if (message.senderId.toString() !== userId.toString()) {
+    throw new AppError("Only the sender can delete messages for everyone", 403);
+  }
+
+  if (message.senderId.toString() !== userId) {
+    throw new AppError(
+      "You can only delete your own messages for everyone",
+      403,
+    );
+  }
+  message.isDeleted = true;
+  message.deletedForEveryone = true;
+  message.deletedAt = new Date();
+  message.deletedBy = [...(message.deletedBy || []), userId as any];
+
+  message.text = undefined;
+  message.attachments = [];
+
+  /*
+     // Mark as deleted for everyone
+    message.isDeleted = true;
+    message.deletedForEveryone = true;
+    message.text = 'This message was deleted';
+    message.attachments = [];
+    message.links = [];
+    message.deletedBy = [userId];
+    message.deletedAt = new Date();
+    */
 
   await message.save();
   return message;

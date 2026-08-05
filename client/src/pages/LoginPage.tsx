@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Loader2, MessageSquare, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { loginWithPassword } from "@/api/auth.api";
 import { importUsersFromZevaClinic } from "@/api/user.api";
+import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
 
 // Zod schema for validation
 const loginSchema = z.object({
@@ -40,7 +41,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
-  const navigate = useNavigate();
+  const { handleRedirect } = useRedirectAfterLogin();
+
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -80,9 +82,8 @@ const LoginPage = () => {
       login(accessToken, user);
 
       //   import users from clinic
-      const userList = await importUsersFromZevaClinic(accessToken);
-      console.log({ userList });
-      navigate("/", { replace: true });
+      await importUsersFromZevaClinic(accessToken);
+      handleRedirect();
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
@@ -115,14 +116,13 @@ const LoginPage = () => {
 
   // Clear field errors when user starts typing
   const handleFieldChange = (field: keyof LoginFormValues) => {
-    return (value: string) => {
+    return (_value: string) => {
       if (errors[field]) {
         clearErrors(field);
       }
       if (serverError) {
         setServerError(null);
       }
-      console.log({ value });
     };
   };
 
@@ -316,7 +316,7 @@ const LoginPage = () => {
             </form>
 
             {/* Sign up link */}
-            <p className="mt-5 text-center text-sm text-muted-foreground">
+            {/* <p className="mt-5 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link
                 to="/auth/signup"
@@ -324,7 +324,7 @@ const LoginPage = () => {
               >
                 Sign up
               </Link>
-            </p>
+            </p> */}
           </CardContent>
         </Card>
 

@@ -1,8 +1,15 @@
 // src/router.tsx
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import { Loader2 } from "lucide-react";
+import { storage } from "./lib/storage";
 
 // Lazy load components
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -27,8 +34,20 @@ const PageLoader = () => (
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
+  const location = useLocation();
+
   if (isLoading) return <PageLoader />;
-  if (!isAuthenticated) return <Navigate to="/auth/sso" replace />;
+
+  if (!isAuthenticated) {
+    const redirectUrl = location.pathname + location.search;
+
+    // ✅ Redirect URL store kar
+    storage.setRedirect(redirectUrl);
+
+    console.log("[ProtectedRoute] 📝 Stored redirect:", redirectUrl);
+
+    return <Navigate to="/auth/sso" replace />;
+  }
 
   return <>{children}</>;
 };
@@ -80,6 +99,14 @@ const AppRouter = () => {
             element={
               <Suspense fallback={<PageLoader />}>
                 <DashboardPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/chat/:chatId"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <ChatPage />
               </Suspense>
             }
           />

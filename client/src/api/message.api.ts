@@ -84,3 +84,15 @@ export const fetchSharedFiles = async (
   const { data } = await axiosClient.get(`/messages/${conversationId}/files`);
   return data.data;
 };
+
+export const deleteMessageForMe = async (messageId: string) => {
+  const response = await axiosClient.delete(`/messages/${messageId}/for-me`);
+  return response.data;
+};
+
+export const deleteMessageForEveryone = async (messageId: string) => {
+  const response = await axiosClient.delete(
+    `/messages/${messageId}/for-everyone`,
+  );
+  return response.data;
+};

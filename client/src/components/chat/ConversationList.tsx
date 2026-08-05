@@ -9,6 +9,7 @@ import ConversationListItem from "./ConversationListItem";
 import StaffListItem from "./StaffListItem";
 import ConversationSkeleton from "./ConversationSkeleton";
 import ConversationEmptyState from "./ConversationEmptyState";
+import { useChatStore } from "@/store/chatStore";
 
 interface ConversationListProps {
   data: UnifiedChatList | undefined;
@@ -29,6 +30,7 @@ const ConversationList = ({
   onSelectStaff,
   onCreateGroup,
 }: ConversationListProps) => {
+  const { permissions } = useChatStore();
   const [search, setSearch] = useState("");
 
   const filteredConversations = data?.conversations.filter((c) => {
@@ -52,15 +54,19 @@ const ConversationList = ({
     <aside className="flex w-full shrink-0 flex-col border-r border-border/60 bg-card/30">
       <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-4">
         <h2 className="text-base font-semibold tracking-tight">Chats</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          title="New group"
-          onClick={onCreateGroup}
-          className={"rounded-sm"}
-        >
-          <SquarePen className="h-4 w-4" />
-        </Button>
+
+        {/* Create group button if user has create group permission */}
+        {permissions?.permission.create && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="New group"
+            onClick={onCreateGroup}
+            className={"rounded-sm"}
+          >
+            <SquarePen className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <div className="px-4 pb-3">

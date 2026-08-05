@@ -3,6 +3,7 @@ import { Router } from "express";
 import {
   addMembers,
   createGroup,
+  getConversation,
   leaveGroupController,
   listConversations,
   makeAdmin,
@@ -15,6 +16,7 @@ import {
 import { requireAuth } from "../middlewares/auth.middleware";
 
 const router = Router();
+router.get("/:conversationId", requireAuth, getConversation);
 router.get("/", requireAuth, listConversations);
 router.post("/group", requireAuth, createGroup);
 

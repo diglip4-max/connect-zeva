@@ -3,6 +3,7 @@ import type {
   ConversationMember,
 } from "@/types/conversation.types";
 import type { MessageDTO, Reaction } from "@/types/message.types";
+import type { PermissionDTO } from "@/types/permission.types";
 import { create } from "zustand";
 
 interface ChatState {
@@ -22,6 +23,13 @@ interface ChatState {
   selectConversation: (conversation: Conversation) => void;
   selectStaffRecipient: (userId: string) => void;
   clearActiveChat: () => void;
+
+  selectedMessage: MessageDTO | null;
+  setSelectedMessage: (message: MessageDTO | null) => void;
+
+  // permissions
+  permissions: PermissionDTO | null;
+  setPermissions: (permissions: PermissionDTO | null) => void;
 
   addMessage: (conversationId: string, message: MessageDTO) => void;
   setMessages: (conversationId: string, messages: MessageDTO[]) => void;
@@ -67,6 +75,9 @@ export const useChatStore = create<ChatState>((set, _get) => ({
   messages: {},
   typingUsers: {},
   selectedConversation: null,
+  selectedMessage: null,
+  setSelectedMessage: (message) => set({ selectedMessage: message }),
+
   replyingTo: null,
   scrollToMessageId: null,
   setReplyingTo: (data) => set({ replyingTo: data }),
@@ -84,6 +95,10 @@ export const useChatStore = create<ChatState>((set, _get) => ({
 
   clearActiveChat: () =>
     set({ activeConversationId: null, pendingRecipientId: null }),
+
+  // permissions
+  permissions: null,
+  setPermissions: (permissions) => set({ permissions }),
 
   addMessage: (conversationId, message) =>
     set((state) => ({

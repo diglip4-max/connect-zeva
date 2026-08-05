@@ -2,11 +2,14 @@ import type { IUser } from "@/types/user.types";
 import axiosClient from "./axiosClient";
 
 export const verifySSOTicket = async (ticket: string) => {
-  const { data } = await axiosClient.post<{ token: string; user: IUser }>(
-    "/auth/sso/verify",
-    { ticket },
-  );
-  return data;
+  const { data } = await axiosClient.post<{
+    data: { accessToken: string; user: IUser };
+    success: boolean;
+    message: string;
+  }>("/auth/sso/verify", { ticket });
+  const token = data?.data?.accessToken || "";
+  const user = data?.data?.user || null;
+  return { token, user };
 };
 
 export const getCurrentUser = async () => {
@@ -15,7 +18,6 @@ export const getCurrentUser = async () => {
     message: string;
     data: IUser;
   }>("/auth/me");
-  console.log({ currentUser: data });
   if (!data) throw new Error("User not found");
   if (!data?.success) throw new Error(data?.message || "User not found");
   return data.data;

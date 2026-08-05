@@ -97,7 +97,6 @@ const ChatWindow = ({
   useSocketEvent<{ conversationId: string; userId: string }>(
     "typing:start",
     (data) => {
-      console.log({ TypingData: data });
       setTyping(data.conversationId, data.userId, true);
     },
   );

@@ -34,11 +34,8 @@ function applyTheme(theme: Theme) {
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    console.log({ stored });
     return stored || "dark";
   });
-
-  console.log({ theme });
 
   useEffect(() => {
     applyTheme(theme);

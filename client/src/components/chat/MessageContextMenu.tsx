@@ -5,6 +5,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useChatStore } from "@/store/chatStore";
 import {
   MoreVertical,
   Reply,
@@ -40,57 +41,63 @@ const MessageContextMenu = ({
   onDelete,
   onCopy,
   onTogglePin,
-}: MessageContextMenuProps) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger>
-      <button className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
-        <MoreVertical className="h-4 w-4" />
-      </button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="w-44">
-      <DropdownMenuItem onClick={onReply}>
-        <Reply className="mr-2 h-4 w-4" /> Reply
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={onForward}>
-        <Forward className="mr-2 h-4 w-4" /> Forward
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={onCopy}>
-        <Copy className="mr-2 h-4 w-4" /> Copy text
-      </DropdownMenuItem>
+}: MessageContextMenuProps) => {
+  const { permissions } = useChatStore();
 
-      {canPin && onTogglePin && (
-        <DropdownMenuItem onClick={onTogglePin}>
-          {isPinned ? (
-            <>
-              <PinOff className="mr-2 h-4 w-4" /> Unpin
-            </>
-          ) : (
-            <>
-              <Pin className="mr-2 h-4 w-4" /> Pin message
-            </>
-          )}
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger>
+        <button className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={onReply}>
+          <Reply className="mr-2 h-4 w-4" /> Reply
         </DropdownMenuItem>
-      )}
-
-      {isOwn && canEdit && (
-        <DropdownMenuItem onClick={onEdit}>
-          <Pencil className="mr-2 h-4 w-4" /> Edit
+        <DropdownMenuItem onClick={onForward}>
+          <Forward className="mr-2 h-4 w-4" /> Forward
         </DropdownMenuItem>
-      )}
+        <DropdownMenuItem onClick={onCopy}>
+          <Copy className="mr-2 h-4 w-4" /> Copy text
+        </DropdownMenuItem>
 
-      {isOwn && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={onDelete}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="mr-2 h-4 w-4" /> Delete
+        {canPin && onTogglePin && (
+          <DropdownMenuItem onClick={onTogglePin}>
+            {isPinned ? (
+              <>
+                <PinOff className="mr-2 h-4 w-4" /> Unpin
+              </>
+            ) : (
+              <>
+                <Pin className="mr-2 h-4 w-4" /> Pin message
+              </>
+            )}
           </DropdownMenuItem>
-        </>
-      )}
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
+        )}
+
+        {/* Edit option based on permissions */}
+        {isOwn && canEdit && permissions?.permission?.update && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Pencil className="mr-2 h-4 w-4" /> Edit
+          </DropdownMenuItem>
+        )}
+
+        {/* Delete option based on permissions */}
+        {permissions?.permission?.delete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onDelete}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 export default MessageContextMenu;

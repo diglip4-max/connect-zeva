@@ -1,6 +1,6 @@
 // src/api/conversation.api.ts (update)
 import axiosClient from "./axiosClient";
-import type { UnifiedChatList } from "@/types/conversation.types";
+import type { Conversation, UnifiedChatList } from "@/types/conversation.types";
 
 export const fetchChatList = async (): Promise<UnifiedChatList> => {
   const { data } = await axiosClient.get<{
@@ -81,5 +81,14 @@ export const updateGroupSettings = async (
     `/conversations/${conversationId}/settings`,
     updates,
   );
+  return data.data;
+};
+
+export const fetchConversation = async (conversationId: string) => {
+  const { data } = await axiosClient.get<{
+    success: boolean;
+    message: string;
+    data: Conversation;
+  }>(`/conversations/${conversationId}`);
   return data.data;
 };

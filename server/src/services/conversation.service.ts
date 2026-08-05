@@ -78,7 +78,7 @@ export async function getUnifiedChatList(
       match: { isActive: true },
     })
     .populate("lastMessage")
-    .sort({ lastMessageAt: -1 });
+    .sort({ lastMessageAt: -1, createdAt: -1 });
 
   const validConversations = conversations.filter((c) => {
     if (c.type === "group") return true;
@@ -405,3 +405,9 @@ export async function updateGroupSettings(
   await conversation.save();
   return conversation;
 }
+
+export const getConversationById = async (conversationId: string) => {
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) throw new AppError("Conversation not found", 404);
+  return conversation;
+};

@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (hasAttemptedRestore.current) return; // dusri baar chalne pe skip
     hasAttemptedRestore.current = true;
+
     // page load par - refresh token cookie se silently naya access token lene ki koshish karo
     const tryRestoreSession = async () => {
       try {

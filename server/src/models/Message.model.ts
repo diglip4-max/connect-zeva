@@ -33,8 +33,11 @@ export interface IMessage extends Document {
   pinnedBy?: Types.ObjectId; // naya
   pinnedAt?: Date; // naya
   isEdited: boolean;
+  deletedBy?: Types.ObjectId[]; // Users who deleted this message for themselves
+  deletedAt?: Date; // When it was deleted
   isDeleted: boolean;
   deletedForEveryone: boolean;
+  deletedForMe?: Types.ObjectId[]; // Track users who deleted for themselves
   createdAt: Date;
   updatedAt: Date;
 }
@@ -91,6 +94,9 @@ const messageSchema = new Schema<IMessage>(
     isEdited: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     deletedForEveryone: { type: Boolean, default: false },
+    deletedBy: [{ type: Schema.Types.ObjectId, ref: "User" }], // Track who deleted
+    deletedAt: { type: Date }, // When deleted it
+    deletedForMe: [{ type: Schema.Types.ObjectId, ref: "User" }], // Users who hid it
   },
   { timestamps: true },
 );

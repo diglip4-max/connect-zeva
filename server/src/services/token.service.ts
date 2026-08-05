@@ -26,18 +26,31 @@ function hashToken(token: string) {
 }
 
 export async function generateRefreshToken(userId: string) {
-  const rawToken = jwt.sign({ userId }, ENV.JWT_REFRESH_SECRET, {
+  // jti - random unique ID, taaki do parallel calls kabhi identical token na banaein
+  const jti = crypto.randomBytes(16).toString("hex");
+
+  const rawToken = jwt.sign({ userId, jti }, ENV.JWT_REFRESH_SECRET, {
     expiresIn: `${ENV.REFRESH_TOKEN_EXPIRES_IN_DAYS}d`,
   });
 
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + ENV.REFRESH_TOKEN_EXPIRES_IN_DAYS);
 
-  await RefreshToken.create({
-    userId,
-    tokenHash: hashToken(rawToken),
-    expiresAt,
-  });
+  const tokenHash = hashToken(rawToken);
+
+  // findOneAndUpdate + upsert - agar kisi wajah se (race condition) same tokenHash
+  // dobara aa jaye, yeh insert crash karne ke bajaye existing doc ko hi update kar dega
+  await RefreshToken.findOneAndUpdate(
+    { tokenHash },
+    {
+      $setOnInsert: {
+        userId,
+        tokenHash,
+        expiresAt,
+      },
+    },
+    { upsert: true, returnDocument: "after" },
+  );
 
   return rawToken;
 }

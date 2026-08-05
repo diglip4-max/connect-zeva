@@ -18,6 +18,7 @@ import { useUIStore } from "@/store/uiStore";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { getInitials } from "@/lib/formatDate";
 import ForwardMessageDialog from "./ForwardMessageDialog";
+import { useChatStore } from "@/store/chatStore";
 
 function formatFileSize(bytes: number) {
   if (!bytes) return "";
@@ -45,6 +46,8 @@ const AttachmentViewer = () => {
   const openViewer = useUIStore((s) => s.openViewer);
   const closeViewer = useUIStore((s) => s.closeViewer);
 
+  const { permissions } = useChatStore();
+
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
 
   const [zoom, setZoom] = useState(1);
@@ -65,13 +68,23 @@ const AttachmentViewer = () => {
   const goToNext = useCallback(() => {
     if (!hasGalleryNav) return;
     const nextIndex = (currentIndex + 1) % gallery.length;
-    openViewer(gallery[nextIndex] as any, gallery);
+    openViewer(
+      gallery[nextIndex] as any,
+      gallery,
+      attachmentSenderInfo,
+      selectedMessageId,
+    );
   }, [hasGalleryNav, currentIndex, gallery, openViewer]);
 
   const goToPrev = useCallback(() => {
     if (!hasGalleryNav) return;
     const prevIndex = (currentIndex - 1 + gallery.length) % gallery.length;
-    openViewer(gallery[prevIndex] as any, gallery);
+    openViewer(
+      gallery[prevIndex] as any,
+      gallery,
+      attachmentSenderInfo,
+      selectedMessageId,
+    );
   }, [hasGalleryNav, currentIndex, gallery, openViewer]);
 
   // keyboard shortcuts
@@ -107,15 +120,12 @@ const AttachmentViewer = () => {
       window.open(attachment.url, "_blank");
     }
   };
+
   const isOfficeDoc = OFFICE_MIME_TYPES.includes(attachment.mimeType);
   const isPdf = attachment.mimeType === "application/pdf";
 
-  console.log({
-    canForward,
-    isForwardModalOpen,
-    selectedMessageId,
-    attachmentSenderInfo,
-  });
+  // Microsoft Office Online Viewer - zyada reliable hai Google Docs Viewer se
+  const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(attachment.url)}`;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background backdrop-blur-sm">
@@ -186,15 +196,19 @@ const AttachmentViewer = () => {
               <Forward className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-white/10 hover:text-white"
-            onClick={handleDownload}
-            title="Download"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
+
+          {/* Download button */}
+          {permissions?.permission?.export && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10 hover:text-white"
+              onClick={handleDownload}
+              title="Download"
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          )}
 
           <Button
             variant="ghost"
@@ -269,9 +283,10 @@ const AttachmentViewer = () => {
 
         {isOfficeDoc && (
           <iframe
-            src={`https://docs.google.com/gview?url=${encodeURIComponent(attachment.url)}&embedded=true`}
+            src={officeViewerUrl}
+            // src={`https://docs.google.com/gview?url=${encodeURIComponent(attachment.url)}&embedded=true`}
             title={attachment.fileName}
-            className="h-full w-full max-w-4xl rounded-lg bg-white"
+            className="h-full w-full max-w-screen-2xl rounded-lg bg-white"
           />
         )}
 

@@ -31,7 +31,7 @@ export async function sendPushToUser(
     icon: payload.icon || "/icon-192.png",
     data: {
       conversationId: payload.conversationId,
-      url: `/chat?conversationId=${payload.conversationId}`,
+      url: `/chat/${payload.conversationId}`,
     },
   });
 
@@ -42,7 +42,6 @@ export async function sendPushToUser(
           { endpoint: sub.endpoint, keys: sub.keys },
           pushPayload,
         );
-        console.log(res);
 
         // naya - successful send ke baad lastUsedAt update karo
         sub.lastUsedAt = new Date();
@@ -67,6 +66,5 @@ export async function sendPushToUsers(
   userIds: string[],
   payload: NotificationPayload,
 ) {
-  console.log({ userIds, payload });
   await Promise.all(userIds.map((userId) => sendPushToUser(userId, payload)));
 }

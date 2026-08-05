@@ -18,7 +18,10 @@ async function verifyTicketWithZeva(
         timeout: 5000,
       },
     );
-    return response.data as ZevaTicketPayload;
+    if (!response?.data?.success || !response?.data?.data) {
+      throw new AppError("Invalid or expired login ticket", 401);
+    }
+    return response.data?.data as ZevaTicketPayload;
   } catch (err) {
     logger.warn({ err }, "SSO ticket verification failed");
     throw new AppError("Invalid or expired login ticket", 401);
@@ -84,7 +87,6 @@ async function verifyCredentialsWithZeva(
 
 export async function loginWithCredentials(email: string, password: string) {
   const zevaPayload = await verifyCredentialsWithZeva(email, password);
-  console.log({ zevaPayload });
   if (!zevaPayload) {
     throw new AppError("Invalid email or password", 401);
   }
@@ -96,9 +98,7 @@ export async function loginWithCredentials(email: string, password: string) {
   ) {
     throw new AppError("Invalid email or password", 401);
   }
-  console.log({ zevaPayload });
   const user = await upsertLocalUser(zevaPayload);
-  //   console.log({ user });
 
   if (!user.isActive) {
     throw new AppError(
