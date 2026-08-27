@@ -30,6 +30,7 @@ export const requireAuth = async (
       clinicId: user.clinicId,
       role: user.role,
       name: user.name,
+      avatarUrl: user.avatarUrl || "",
     };
 
     next();

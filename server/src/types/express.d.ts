@@ -6,6 +6,7 @@ declare namespace Express {
       clinicId: string;
       role: string;
       name: string;
+      avatarUrl: string;
     };
   }
 }
