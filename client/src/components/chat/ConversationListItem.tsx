@@ -21,6 +21,7 @@ const ConversationListItem = ({
   const isDirect = conversation.type === "direct";
   const displayName =
     conversation.groupName || recipient?.name || "Direct chat";
+  const avatarUrl = conversation.groupAvatarUrl || recipient?.avatarUrl;
 
   return (
     <button
@@ -31,7 +32,7 @@ const ConversationListItem = ({
     >
       <div className="relative">
         <Avatar className="h-11 w-11 shrink-0">
-          <AvatarImage src={conversation.groupAvatarUrl} alt={displayName} />
+          <AvatarImage src={avatarUrl} alt={displayName} />
           <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
             {getInitials(displayName)}
           </AvatarFallback>

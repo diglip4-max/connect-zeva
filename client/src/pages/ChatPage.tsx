@@ -103,6 +103,17 @@ const ChatPage = () => {
     return otherMember?.name || "Direct chat";
   };
 
+  const getConversationAvatarUrl = () => {
+    if (!activeConversation) return "";
+    if (activeConversation.type === "group")
+      return activeConversation.groupAvatarUrl || "";
+
+    const otherMember = activeConversation.members.filter(
+      (m) => m._id !== user?.id,
+    )[0];
+    return otherMember?.avatarUrl || "";
+  };
+
   const getIsOnline = () => {
     if (!activeConversation) return false;
     if (activeConversation.type === "group") return false;
@@ -216,10 +227,7 @@ const ChatPage = () => {
             conversationId={activeConversationId}
             recipientId={null}
             displayName={getConversationDisplayName()}
-            avatarUrl={
-              activeConversation.groupAvatarUrl ||
-              activeConversation.members[0]?.avatarUrl
-            }
+            avatarUrl={getConversationAvatarUrl()}
             isOnline={getIsOnline()}
             conversationType={activeConversation.type}
             onlineCount={
@@ -261,10 +269,7 @@ const ChatPage = () => {
           <ConversationInfoPanel
             type={activeConversation.type}
             displayName={getConversationDisplayName()}
-            avatarUrl={
-              activeConversation.groupAvatarUrl ||
-              activeConversation.members[0]?.avatarUrl
-            }
+            avatarUrl={getConversationAvatarUrl()}
             isOnline={activeConversation.members[0]?.isOnline}
             role={activeConversation.members[0]?.role}
             members={activeConversation.members}

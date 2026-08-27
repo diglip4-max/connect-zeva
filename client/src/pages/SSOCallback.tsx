@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
+import { importUsersFromZevaClinic } from "@/api/user.api";
 
 type Status = "verifying" | "error";
 
@@ -39,8 +40,8 @@ const SSOCallback = () => {
     }
 
     verifySSOTicket(ticket)
-      .then(({ token, user }) => {
-        setTimeout(() => {
+      .then(async ({ token, user }) => {
+        setTimeout(async () => {
           if (!token || !user) {
             setErrorMessage(
               "Login ticket verification failed. Please try again from Zeva Clinic.",
@@ -49,6 +50,9 @@ const SSOCallback = () => {
             return;
           }
           login(token, user);
+
+          //   import users from clinic
+          await importUsersFromZevaClinic(token);
 
           // Redirect to stored URL or default to "/chat"
           handleRedirect();
